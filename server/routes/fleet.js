@@ -58,11 +58,23 @@ router.post('/:vaId', authMiddleware, checkVARole(['Owner', 'Admin']), async (re
 router.put('/:vaId/:fleetId', authMiddleware, checkVARole(['Owner', 'Admin']), async (req, res) => {
   try {
     const { vaId, fleetId } = req.params;
-    const { status, home_airport, notes } = req.body;
+    const { registration, aircraft_type, aircraft_name, home_airport, status, notes } = req.body;
+
+    // Check if registration is being changed and if it already exists
+    if (registration) {
+      const [existing] = await db.query(
+        'SELECT id FROM va_fleet WHERE va_id = ? AND registration = ? AND id != ?',
+        [vaId, registration, fleetId]
+      );
+
+      if (existing.length > 0) {
+        return res.status(400).json({ error: 'Registration already exists in fleet' });
+      }
+    }
 
     await db.query(
-      'UPDATE va_fleet SET status = ?, home_airport = ?, notes = ? WHERE id = ? AND va_id = ?',
-      [status, home_airport, notes, fleetId, vaId]
+      'UPDATE va_fleet SET registration = ?, aircraft_type = ?, aircraft_name = ?, home_airport = ?, status = ?, notes = ? WHERE id = ? AND va_id = ?',
+      [registration, aircraft_type, aircraft_name, home_airport, status || 'active', notes || null, fleetId, vaId]
     );
 
     res.json({ message: 'Fleet aircraft updated' });

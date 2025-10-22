@@ -264,4 +264,109 @@ router.put('/:vaId', authMiddleware, checkVARole(['Owner', 'Admin']), upload.sin
   }
 });
 
+// Get VA members (for management page)
+router.get('/:vaId/members', authMiddleware, async (req, res) => {
+  try {
+    const { vaId } = req.params;
+
+    const [members] = await db.query(`
+      SELECT 
+        vm.id,
+        vm.user_id,
+        u.username,
+        u.email,
+        vm.role,
+        vm.points,
+        vm.total_flights,
+        vm.total_hours,
+        vm.join_date,
+        vm.status
+      FROM va_members vm
+      JOIN users u ON vm.user_id = u.id
+      WHERE vm.va_id = ? AND vm.status = 'active'
+      ORDER BY 
+        CASE vm.role 
+          WHEN 'Owner' THEN 1 
+          WHEN 'Admin' THEN 2
+          WHEN 'Pilot' THEN 3
+          ELSE 4
+        END,
+        vm.points DESC
+    `, [vaId]);
+
+    res.json({ members });
+  } catch (error) {
+    console.error('Get members error:', error);
+    res.status(500).json({ error: 'Failed to fetch members' });
+  }
+});
+
+// Update member role (owner/admin only)
+router.put('/:vaId/members/:memberId', authMiddleware, checkVARole(['Owner', 'Admin']), async (req, res) => {
+  try {
+    const { vaId, memberId } = req.params;
+    const { role } = req.body;
+
+    // Prevent changing owner role
+    const [member] = await db.query(
+      'SELECT role FROM va_members WHERE id = ? AND va_id = ?',
+      [memberId, vaId]
+    );
+
+    if (member.length === 0) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+
+    if (member[0].role === 'Owner') {
+      return res.status(403).json({ error: 'Cannot change owner role' });
+    }
+
+    // Only owner can set admin role
+    if (role === 'Admin' && req.vaRole !== 'Owner') {
+      return res.status(403).json({ error: 'Only owner can assign admin role' });
+    }
+
+    await db.query(
+      'UPDATE va_members SET role = ? WHERE id = ? AND va_id = ?',
+      [role, memberId, vaId]
+    );
+
+    res.json({ message: 'Member role updated successfully' });
+  } catch (error) {
+    console.error('Update member error:', error);
+    res.status(500).json({ error: 'Failed to update member role' });
+  }
+});
+
+// Remove member (owner/admin only)
+router.delete('/:vaId/members/:memberId', authMiddleware, checkVARole(['Owner', 'Admin']), async (req, res) => {
+  try {
+    const { vaId, memberId } = req.params;
+
+    // Prevent removing owner
+    const [member] = await db.query(
+      'SELECT role FROM va_members WHERE id = ? AND va_id = ?',
+      [memberId, vaId]
+    );
+
+    if (member.length === 0) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+
+    if (member[0].role === 'Owner') {
+      return res.status(403).json({ error: 'Cannot remove owner' });
+    }
+
+    await db.query(
+      'UPDATE va_members SET status = ? WHERE id = ? AND va_id = ?',
+      ['left', memberId, vaId]
+    );
+
+    res.json({ message: 'Member removed successfully' });
+  } catch (error) {
+    console.error('Remove member error:', error);
+    res.status(500).json({ error: 'Failed to remove member' });
+  }
+});
+
 module.exports = router;

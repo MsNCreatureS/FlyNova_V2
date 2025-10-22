@@ -14,6 +14,7 @@ const profileRoutes = require('./routes/profile');
 const dataRoutes = require('./routes/data');
 const airportRoutes = require('./routes/airports');
 const aircraftRoutes = require('./routes/aircraft');
+const eventRoutes = require('./routes/events');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -38,6 +39,7 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/data', dataRoutes);
 app.use('/api/airports', airportRoutes);
 app.use('/api/aircraft', aircraftRoutes);
+app.use('/api/events', eventRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

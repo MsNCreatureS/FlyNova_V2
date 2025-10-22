@@ -187,6 +187,7 @@ CREATE TABLE IF NOT EXISTS events (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     event_type ENUM('focus_airport', 'route_challenge', 'special_event', 'competition') DEFAULT 'special_event',
+    cover_image VARCHAR(255),
     focus_airport_id INT NULL,
     start_date TIMESTAMP NOT NULL,
     end_date TIMESTAMP NOT NULL,

@@ -57,14 +57,29 @@ router.post('/:vaId', authMiddleware, checkVARole(['Owner', 'Admin']), async (re
 });
 
 // Update route (admin only)
-router.put('/:vaId/:routeId', authMiddleware, checkVARole(['owner', 'admin']), async (req, res) => {
+router.put('/:vaId/:routeId', authMiddleware, checkVARole(['Owner', 'Admin']), async (req, res) => {
   try {
     const { vaId, routeId } = req.params;
-    const { status, aircraftId, distance, duration } = req.body;
+    const { flight_number, route_type, departure_icao, departure_name, arrival_icao, arrival_name, aircraft_type } = req.body;
+
+    // Check if flight number is being changed and if it already exists
+    if (flight_number) {
+      const [existing] = await db.query(
+        'SELECT id FROM va_routes WHERE va_id = ? AND flight_number = ? AND id != ?',
+        [vaId, flight_number, routeId]
+      );
+
+      if (existing.length > 0) {
+        return res.status(400).json({ error: 'Flight number already exists' });
+      }
+    }
 
     await db.query(
-      'UPDATE va_routes SET status = ?, aircraft_id = ?, distance = ?, duration = ? WHERE id = ? AND va_id = ?',
-      [status, aircraftId, distance, duration, routeId, vaId]
+      `UPDATE va_routes 
+       SET flight_number = ?, route_type = ?, departure_icao = ?, departure_name = ?, 
+           arrival_icao = ?, arrival_name = ?, aircraft_type = ?
+       WHERE id = ? AND va_id = ?`,
+      [flight_number, route_type, departure_icao, departure_name, arrival_icao, arrival_name, aircraft_type || null, routeId, vaId]
     );
 
     res.json({ message: 'Route updated successfully' });
