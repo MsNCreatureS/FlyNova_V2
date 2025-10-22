@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-3 bg-aviation-600 text-white rounded-lg font-semibold hover:bg-aviation-700 transition-colors duration-200 shadow-md hover:shadow-lg;
+  }
+  
+  .btn-secondary {
+    @apply px-6 py-3 bg-white text-aviation-600 border-2 border-aviation-600 rounded-lg font-semibold hover:bg-aviation-50 transition-colors duration-200;
+  }
+  
+  .card {
+    @apply bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-aviation-500 focus:border-transparent outline-none transition-all;
+  }
+  
+  .section-title {
+    @apply text-3xl md:text-4xl font-bold text-slate-900 mb-4;
+  }
+  
+  .aviation-gradient {
+    @apply bg-gradient-to-br from-aviation-600 to-aviation-800;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-slate-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-aviation-400 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-aviation-600;
+}
