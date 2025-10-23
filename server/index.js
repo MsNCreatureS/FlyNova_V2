@@ -20,8 +20,13 @@ const simbriefRoutes = require('./routes/simbrief');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
-app.use(cors());
+// Middleware - CORS avec credentials
+app.use(cors({
+  origin: 'http://localhost:3000', // Frontend Next.js
+  credentials: true, // Permet les cookies et credentials
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

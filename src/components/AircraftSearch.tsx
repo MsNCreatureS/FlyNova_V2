@@ -11,7 +11,7 @@ interface Aircraft {
 
 interface AircraftSearchProps {
   value: string;
-  onChange: (aircraftName: string, aircraft: Aircraft) => void;
+  onChange: (aircraftCode: string, aircraft: Aircraft) => void; // First param is ICAO/IATA code, not name
   placeholder?: string;
   label?: string;
   required?: boolean;
@@ -81,7 +81,9 @@ export default function AircraftSearch({ value, onChange, placeholder, label, re
     setSelectedAircraft(aircraft);
     setSearchTerm(formatAircraftDisplay(aircraft));
     setShowResults(false);
-    onChange(aircraft.name, aircraft);
+    // Pass ICAO code as first parameter (falls back to IATA or empty string)
+    const aircraftCode = aircraft.icao_code || aircraft.iata_code || '';
+    onChange(aircraftCode, aircraft);
   };
 
   const handleClear = () => {

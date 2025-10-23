@@ -251,8 +251,17 @@ export default function BriefingPage() {
     setFuelUnits(simbriefConfig.units);
 
     try {
+      // Debug: Log flight data
+      console.log('🛩️ Flight data:', {
+        aircraft_name: flight.aircraft_name,
+        aircraft_icao: flight.aircraft_icao,
+        aircraft_registration: flight.aircraft_registration
+      });
+      
       // Use aircraft ICAO code from database or fallback to extraction
       const aircraftType = flight.aircraft_icao || extractAircraftICAO(flight.aircraft_name);
+      
+      console.log('✈️ Aircraft Type determined:', aircraftType);
       
       // Validate aircraft type
       if (!aircraftType || aircraftType.length < 3) {
@@ -410,46 +419,84 @@ export default function BriefingPage() {
 
   // Helper function to extract aircraft ICAO code
   const extractAircraftICAO = (aircraftName: string): string => {
-    if (!aircraftName) return 'B738';
+    if (!aircraftName) {
+      console.warn('⚠️ No aircraft name provided, using default B738');
+      return 'B738';
+    }
 
-    // Common mappings
+    console.log('🔍 Extracting ICAO from:', aircraftName);
+
+    // Common mappings (plus exhaustive)
     const mappings: { [key: string]: string } = {
       'boeing 737-800': 'B738',
+      '737-800': 'B738',
+      'b737-800': 'B738',
+      'b738': 'B738',
       'boeing 737-700': 'B737',
+      '737-700': 'B737',
+      'b737-700': 'B737',
       'boeing 737-900': 'B739',
+      '737-900': 'B739',
       'boeing 737': 'B738',
+      '737': 'B738',
       'airbus a320': 'A320',
+      'a320': 'A320',
       'airbus a321': 'A321',
+      'a321': 'A321',
       'airbus a319': 'A319',
+      'a319': 'A319',
       'airbus a318': 'A318',
+      'a318': 'A318',
       'boeing 777-300er': 'B77W',
+      '777-300er': 'B77W',
+      'b777-300er': 'B77W',
       'boeing 777-200': 'B772',
+      '777-200': 'B772',
       'boeing 787-9': 'B789',
+      '787-9': 'B789',
       'boeing 787-8': 'B788',
+      '787-8': 'B788',
       'boeing 747-400': 'B744',
+      '747-400': 'B744',
       'boeing 747-8': 'B748',
+      '747-8': 'B748',
       'airbus a330-300': 'A333',
+      'a330-300': 'A333',
       'airbus a330-200': 'A332',
+      'a330-200': 'A332',
       'airbus a350-900': 'A359',
+      'a350-900': 'A359',
       'airbus a350-1000': 'A35K',
+      'a350-1000': 'A35K',
+      'a35k': 'A35K',
+      'airbus a380': 'A388',
+      'a380': 'A388',
+      'boeing 757': 'B752',
+      '757': 'B752',
+      'boeing 767': 'B763',
+      '767': 'B763',
     };
 
-    const lowerName = aircraftName.toLowerCase();
+    const lowerName = aircraftName.toLowerCase().trim();
     
     // Check mappings first
     for (const [key, value] of Object.entries(mappings)) {
       if (lowerName.includes(key)) {
+        console.log(`✅ Found mapping: "${key}" → ${value}`);
         return value;
       }
     }
 
     // Try to extract 4-letter ICAO code from name (e.g., "B738", "A320")
-    const match = aircraftName.match(/\b([AB]\d{3}[A-Z]?)\b/i);
+    const match = aircraftName.match(/\b([AB]\d{3}[A-Z0-9]?)\b/i);
     if (match) {
-      return match[1].toUpperCase();
+      const code = match[1].toUpperCase();
+      console.log(`✅ Extracted ICAO code from name: ${code}`);
+      return code;
     }
 
     // Default fallback
+    console.warn(`⚠️ Could not determine ICAO for "${aircraftName}", using default B738`);
     return 'B738';
   };
 
@@ -582,9 +629,9 @@ export default function BriefingPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-4xl font-bold text-slate-900">Flight Briefing</h1>
-              <p className="text-2xl text-aviation-600 font-semibold mt-2">{flight.flight_number}</p>
+              <p className="text-2xl text-va-primary font-semibold mt-2">{flight.flight_number}</p>
             </div>
-            <Link href={`/va/${vaId}/pilot/dashboard`} className="btn-secondary">
+            <Link href={`/va/${vaId}/pilot/dashboard`} className="btn-va-secondary px-6 py-3">
               ← Back to Dashboard
             </Link>
           </div>
@@ -597,31 +644,40 @@ export default function BriefingPage() {
           transition={{ delay: 0.1 }}
           className="card p-8 mb-6"
         >
-          <div className="grid md:grid-cols-3 gap-6">
-            <div>
-              <p className="text-sm text-slate-600 mb-2">Departure</p>
-              <p className="text-3xl font-bold text-slate-900 mb-1">{flight.departure_icao}</p>
-              <p className="text-slate-600">{flight.departure_name}</p>
+          {/* Route Display */}
+          <div className="flex items-center justify-center gap-6 mb-8">
+            <div className="text-center">
+              <p className="text-sm text-slate-500 uppercase tracking-wide mb-2">Departure</p>
+              <div className="bg-va-primary text-white px-8 py-4 rounded-xl shadow-lg" style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-text-on-primary)' }}>
+                <p className="text-4xl font-bold tracking-wider">{flight.departure_icao}</p>
+              </div>
+              <p className="text-slate-600 mt-2 font-medium">{flight.departure_name}</p>
             </div>
-            <div className="flex items-center justify-center">
-              <div className="text-6xl text-aviation-600">✈️</div>
+            
+            <div className="flex items-center">
+              <svg className="w-16 h-16 text-va-primary animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
             </div>
-            <div>
-              <p className="text-sm text-slate-600 mb-2">Arrival</p>
-              <p className="text-3xl font-bold text-slate-900 mb-1">{flight.arrival_icao}</p>
-              <p className="text-slate-600">{flight.arrival_name}</p>
+            
+            <div className="text-center">
+              <p className="text-sm text-slate-500 uppercase tracking-wide mb-2">Arrival</p>
+              <div className="bg-va-primary text-white px-8 py-4 rounded-xl shadow-lg" style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-text-on-primary)' }}>
+                <p className="text-4xl font-bold tracking-wider">{flight.arrival_icao}</p>
+              </div>
+              <p className="text-slate-600 mt-2 font-medium">{flight.arrival_name}</p>
             </div>
           </div>
 
-          <div className="mt-6 pt-6 border-t border-slate-200 grid md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-slate-600">Aircraft</p>
-              <p className="font-bold text-lg text-slate-900">{flight.aircraft_registration}</p>
-              <p className="text-sm text-slate-600">{flight.aircraft_name}</p>
+          <div className="mt-6 pt-6 border-t border-slate-200 flex justify-center gap-12">
+            <div className="text-center">
+              <p className="text-sm text-slate-500 uppercase tracking-wide mb-2">Aircraft</p>
+              <p className="font-bold text-xl text-slate-900">{flight.aircraft_registration}</p>
+              <p className="text-sm text-slate-600 mt-1">{flight.aircraft_name}</p>
             </div>
-            <div>
-              <p className="text-sm text-slate-600">Status</p>
-              <span className={`inline-block mt-1 px-4 py-2 rounded-lg font-semibold ${
+            <div className="text-center">
+              <p className="text-sm text-slate-500 uppercase tracking-wide mb-2">Status</p>
+              <span className={`inline-block px-6 py-2 rounded-lg font-semibold text-lg ${
                 flight.status === 'reserved' ? 'bg-yellow-100 text-yellow-700' :
                 flight.status === 'in_progress' ? 'bg-green-100 text-green-700' :
                 'bg-slate-100 text-slate-700'
@@ -652,7 +708,7 @@ export default function BriefingPage() {
                 <button
                   onClick={generateSimbrief}
                   disabled={generatingBrief}
-                  className="btn-primary text-lg px-8 py-4"
+                  className="btn-va-primary text-lg px-8 py-4"
                 >
                   {generatingBrief ? 'Opening SimBrief...' : '🚀 Generate with SimBrief'}
                 </button>
@@ -706,7 +762,7 @@ export default function BriefingPage() {
                   <button
                     onClick={submitSimbriefGeneration}
                     disabled={generatingBrief}
-                    className="btn-primary flex-1"
+                    className="btn-va-primary flex-1"
                   >
                     {generatingBrief ? 'Generating...' : '✈️ Generate'}
                   </button>
@@ -732,7 +788,7 @@ export default function BriefingPage() {
                     onClick={() => setActiveTab(tab as any)}
                     className={`pb-4 px-2 font-semibold transition-colors capitalize whitespace-nowrap ${
                       activeTab === tab
-                        ? 'text-aviation-600 border-b-2 border-aviation-600'
+                        ? 'text-va-primary border-b-2 border-va-primary'
                         : 'text-slate-500 hover:text-slate-700'
                     }`}
                   >
@@ -760,7 +816,7 @@ export default function BriefingPage() {
                   </div>
                   <div className="card p-6">
                     <p className="text-sm text-slate-600 mb-2">Flight Time</p>
-                    <p className="text-2xl font-bold text-aviation-600">
+                    <p className="text-2xl font-bold text-va-primary">
                       {formatFlightTime(simbriefData?.times?.est_time_enroute)}
                     </p>
                   </div>
@@ -786,6 +842,12 @@ export default function BriefingPage() {
                     <p className="text-sm text-slate-600 mb-2">Units</p>
                     <p className="text-2xl font-bold text-slate-900">
                       {simbriefData?.params?.units || fuelUnits}
+                    </p>
+                  </div>
+                  <div className="card p-6">
+                    <p className="text-sm text-slate-600 mb-2">👥 Passengers</p>
+                    <p className="text-2xl font-bold text-slate-900">
+                      {simbriefData?.weights?.pax_count || 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -900,6 +962,14 @@ export default function BriefingPage() {
                   <p className="text-sm text-slate-600 mb-2">Max Landing Weight</p>
                   <p className="text-3xl font-bold text-aviation-600">{simbriefData.weights.max_ldw} lbs</p>
                 </div>
+                <div className="card p-6">
+                  <p className="text-sm text-slate-600 mb-2">📦 Cargo Weight</p>
+                  <p className="text-3xl font-bold text-slate-900">{simbriefData?.weights?.cargo || 'N/A'} {simbriefData?.params?.units || fuelUnits}</p>
+                </div>
+                <div className="card p-6">
+                  <p className="text-sm text-slate-600 mb-2">Payload</p>
+                  <p className="text-3xl font-bold text-slate-900">{simbriefData?.weights?.payload || 'N/A'} {simbriefData?.params?.units || fuelUnits}</p>
+                </div>
               </motion.div>
             )}
           </>
@@ -915,37 +985,131 @@ export default function BriefingPage() {
           >
             <h2 className="text-xl font-bold text-slate-900 mb-4">🌐 Online Network Filing</h2>
             <p className="text-slate-600 mb-4">
-              Pre-file your flight plan with VATSIM or IVAO directly from SimBrief.
+              Pre-file your flight plan with VATSIM or IVAO directly from SimBrief with all data auto-filled.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* VATSIM Prefile */}
               <a
-                href={`https://my.vatsim.net/pilots/flightplan?autoFill=${simbriefData?.params?.ofp_id || ''}`}
+                href={simbriefData?.prefile?.vatsim?.link || `https://my.vatsim.net/pilots/flightplan?${(() => {
+                  // Get current UTC time as default for off-block
+                  const now = new Date();
+                  const currentUTC = now.getUTCHours().toString().padStart(2, '0') + 
+                                    now.getUTCMinutes().toString().padStart(2, '0');
+                  
+                  // Aircraft Type - code ICAO (A343, B738, etc.)
+                  const aircraftType = simbriefData?.aircraft?.icaocode || '';
+                  console.log('🛩️ Aircraft ICAO:', aircraftType);
+                  console.log('📊 Aircraft full data:', simbriefData?.aircraft);
+                  
+                  // Off Block Time
+                  const schedOut = simbriefData?.times?.sched_out || simbriefData?.times?.est_out || '';
+                  console.log('🕐 Sched out raw:', schedOut);
+                  console.log('📊 Times full data:', simbriefData?.times);
+                  
+                  let offBlockTime = currentUTC; // Default to current UTC
+                  if (schedOut) {
+                    const outTime = new Date(parseInt(schedOut) * 1000);
+                    offBlockTime = outTime.getUTCHours().toString().padStart(2, '0') + 
+                                  outTime.getUTCMinutes().toString().padStart(2, '0');
+                  }
+                  console.log('🕐 Off Block Time (HHMM):', offBlockTime);
+                  
+                  // Wake Category - VATSIM mapping
+                  const wakeRaw = simbriefData?.aircraft?.wake || 'M';
+                  let wakeVatsim = 'M'; // Default Medium
+                  if (wakeRaw === 'L') wakeVatsim = 'L'; // Light (MTOW <= 7,000 kg)
+                  else if (wakeRaw === 'M') wakeVatsim = 'M'; // Medium (MTOW <= 136,000 kg)
+                  else if (wakeRaw === 'H') wakeVatsim = 'H'; // Heavy
+                  else if (wakeRaw === 'J' || wakeRaw === 'S') wakeVatsim = 'J'; // Super (A388)
+                  console.log('💨 Wake Category raw:', wakeRaw, '→ VATSIM:', wakeVatsim);
+                  
+                  // Equipment (ICAO/FAA format) - Full string
+                  const equipmentFull = simbriefData?.aircraft?.equip || 'SDE2E3FGHIJ3J5M1RWXYZ/LB1';
+                  console.log('� Equipment:', equipmentFull);
+                  
+                  // Off Block UTC - Use scheduled departure time
+                  const schedDep = simbriefData?.times?.sched_dep || simbriefData?.times?.est_out || '';
+                  let depTimeUTC = offBlockTime; // Default to current
+                  if (schedDep) {
+                    const depTime = new Date(parseInt(schedDep) * 1000);
+                    depTimeUTC = depTime.getUTCHours().toString().padStart(2, '0') + 
+                                depTime.getUTCMinutes().toString().padStart(2, '0');
+                  }
+                  console.log('🕐 Departure Time UTC:', depTimeUTC, 'from timestamp:', schedDep);
+                  
+                  // Enroute Time (HHMM)
+                  const enrouteTime = parseInt(simbriefData?.times?.est_time_enroute || '0');
+                  const enrouteHours = Math.floor(enrouteTime / 3600);
+                  const enrouteMinutes = Math.floor((enrouteTime % 3600) / 60);
+                  const enrouteHHMM = enrouteHours.toString().padStart(2, '0') + 
+                                     enrouteMinutes.toString().padStart(2, '0');
+                  console.log('⏱️ Enroute Time:', enrouteHHMM, `(${enrouteHours}h${enrouteMinutes}m)`);
+                  
+                  // Fuel Endurance (HHMM)
+                  const endurance = parseInt(simbriefData?.times?.endurance || '0');
+                  const enduranceHours = Math.floor(endurance / 3600);
+                  const enduranceMinutes = Math.floor((endurance % 3600) / 60);
+                  const enduranceHHMM = enduranceHours.toString().padStart(2, '0') + 
+                                       enduranceMinutes.toString().padStart(2, '0');
+                  console.log('⛽ Fuel Endurance:', enduranceHHMM, `(${enduranceHours}h${enduranceMinutes}m)`);
+                  
+                  // Build URL with correct VATSIM parameter names
+                  const vatsimUrl = `https://my.vatsim.net/pilots/flightplan?` +
+                    `callsign=${encodeURIComponent(simbriefData?.atc?.callsign || '')}` +
+                    `&aircraft=${encodeURIComponent(aircraftType)}` + // Type d'avion ICAO
+                    `&wake=${encodeURIComponent(wakeVatsim)}` + // Wake Category (L/M/H/J)
+                    `&equipment=${encodeURIComponent(equipmentFull)}` + // Equipment complet (ICAO/FAA)
+                    `&transponder=${encodeURIComponent(simbriefData?.aircraft?.transponder || 'LB1')}` +
+                    `&departure=${encodeURIComponent(simbriefData?.origin?.icao_code || '')}` +
+                    `&arrival=${encodeURIComponent(simbriefData?.destination?.icao_code || '')}` +
+                    `&alternate=${encodeURIComponent(simbriefData?.alternate?.icao_code || '')}` +
+                    `&altitude=${encodeURIComponent(simbriefData?.general?.initial_altitude || '')}` +
+                    `&speed=${encodeURIComponent(simbriefData?.general?.cruise_tas || '')}` + // Airspeed (knots)
+                    `&dep_time=${encodeURIComponent(depTimeUTC)}` + // Off Block UTC (HHMM)
+                    `&enroute_time=${encodeURIComponent(enrouteHHMM)}` + // Enroute Time (HHMM)
+                    `&fuel_time=${encodeURIComponent(enduranceHHMM)}` + // Fuel Endurance (HHMM)
+                    `&flight_rules=${encodeURIComponent(simbriefData?.params?.flight_rules || 'I')}` +
+                    `&route=${encodeURIComponent(simbriefData?.general?.route || '')}` +
+                    `&remarks=${encodeURIComponent(`SIMBRIEF ${simbriefData?.params?.request_id || ''} /V/`)}`;
+                  
+                  console.log('📋 VATSIM URL:', vatsimUrl);
+                  return vatsimUrl.split('?')[1]; // Return just the query string
+                })()}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-lg"
+                className="group relative overflow-hidden bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl"
               >
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
-                </svg>
-                <span>Prefile on VATSIM</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
+                <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
+                <div className="relative p-6 flex items-center gap-4">
+                  <img src="/img/Logo_VATSIM.png" alt="VATSIM" className="w-16 h-16 object-contain bg-white rounded-lg p-2" />
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold mb-1">VATSIM</h3>
+                    <p className="text-sm text-blue-100">Pre-file on VATSIM Network</p>
+                  </div>
+                  <svg className="w-6 h-6 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </div>
               </a>
-              
+
+              {/* IVAO Prefile */}
               <a
-                href={`https://fpl.ivao.aero/api/fp/load?sbid=${simbriefData?.params?.ofp_id || ''}`}
+                href={simbriefData?.prefile?.ivao?.link || '#'}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-3 px-6 py-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors shadow-lg"
+                className="group relative overflow-hidden bg-gradient-to-br from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl"
               >
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
-                </svg>
-                <span>Prefile on IVAO</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
+                <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
+                <div className="relative p-6 flex items-center gap-4">
+                  <img src="/img/Logo_IVAO.png" alt="IVAO" className="w-16 h-16 object-contain bg-white rounded-lg p-2" />
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold mb-1">IVAO</h3>
+                    <p className="text-sm text-red-100">Pre-file on IVAO Network</p>
+                  </div>
+                  <svg className="w-6 h-6 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </div>
               </a>
             </div>
             <p className="text-xs text-slate-500 mt-4">
@@ -964,14 +1128,14 @@ export default function BriefingPage() {
           <h2 className="text-2xl font-bold text-slate-900 mb-4">📡 Next Steps</h2>
           <div className="space-y-4">
             <div className="flex items-start gap-4">
-              <div className="w-10 h-10 bg-aviation-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
+              <div className="w-10 h-10 bg-va-primary text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
                 1
               </div>
               <div>
                 <h3 className="font-bold text-lg text-slate-900 mb-1">Download Flight Tracker</h3>
                 <p className="text-slate-600">
                   If you haven't already, download and install the FlyNova flight tracker from the{' '}
-                  <Link href="/downloads" className="text-aviation-600 hover:underline font-semibold">
+                  <Link href="/downloads" className="text-va-primary hover:underline font-semibold">
                     Downloads
                   </Link>{' '}
                   page.
@@ -980,7 +1144,7 @@ export default function BriefingPage() {
             </div>
 
             <div className="flex items-start gap-4">
-              <div className="w-10 h-10 bg-aviation-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
+              <div className="w-10 h-10 bg-va-primary text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
                 2
               </div>
               <div>
@@ -992,7 +1156,7 @@ export default function BriefingPage() {
             </div>
 
             <div className="flex items-start gap-4">
-              <div className="w-10 h-10 bg-aviation-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
+              <div className="w-10 h-10 bg-va-primary text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
                 3
               </div>
               <div>
@@ -1004,7 +1168,7 @@ export default function BriefingPage() {
             </div>
 
             <div className="flex items-start gap-4">
-              <div className="w-10 h-10 bg-green-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
+              <div className="w-10 h-10 bg-va-secondary text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
                 ✓
               </div>
               <div>
@@ -1019,13 +1183,13 @@ export default function BriefingPage() {
           <div className="mt-8 flex gap-4">
             <button
               onClick={startFlight}
-              className="btn-primary flex-1"
+              className="btn-va-primary flex-1"
             >
               ✈️ Mark Flight as Started
             </button>
             <Link
               href="/tracker"
-              className="btn-secondary flex-1 text-center"
+              className="btn-va-secondary flex-1 text-center flex items-center justify-center"
             >
               📡 Go to Tracker Page
             </Link>

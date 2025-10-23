@@ -59,7 +59,19 @@ router.get('/', async (req, res) => {
 // Create Virtual Airline
 router.post('/', authMiddleware, upload.single('logo'), async (req, res) => {
   try {
-    const { name, callsign, icao_code, iata_code, description, website, logo_url } = req.body;
+    const { 
+      name, 
+      callsign, 
+      icao_code, 
+      iata_code, 
+      description, 
+      website, 
+      logo_url,
+      primary_color,
+      secondary_color,
+      accent_color,
+      text_on_primary
+    } = req.body;
     const userId = req.user.id;
 
     // Check if user already owns a VA
@@ -88,10 +100,26 @@ router.post('/', authMiddleware, upload.single('logo'), async (req, res) => {
       finalLogoUrl = '/uploads/logos/' + req.file.filename;
     }
 
-    // Create VA
+    // Create VA with branding colors
     const [result] = await db.query(
-      'INSERT INTO virtual_airlines (name, callsign, icao_code, iata_code, owner_id, description, website, logo_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [name, callsign, icao_code || null, iata_code || null, userId, description || null, website || null, finalLogoUrl]
+      `INSERT INTO virtual_airlines 
+      (name, callsign, icao_code, iata_code, owner_id, description, website, logo_url, 
+       primary_color, secondary_color, accent_color, text_on_primary) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        name, 
+        callsign, 
+        icao_code || null, 
+        iata_code || null, 
+        userId, 
+        description || null, 
+        website || null, 
+        finalLogoUrl,
+        primary_color || '#00c853',
+        secondary_color || '#00a843',
+        accent_color || '#00ff7f',
+        text_on_primary || '#ffffff'
+      ]
     );
 
     const vaId = result.insertId;
@@ -119,7 +147,7 @@ router.post('/', authMiddleware, upload.single('logo'), async (req, res) => {
   }
 });
 
-// Get VA details
+// Get VA details with branding
 router.get('/:vaId', async (req, res) => {
   try {
     const { vaId } = req.params;
@@ -127,6 +155,10 @@ router.get('/:vaId', async (req, res) => {
     const [vas] = await db.query(`
       SELECT 
         va.*,
+        COALESCE(va.primary_color, '#00c853') as primary_color,
+        COALESCE(va.secondary_color, '#00a843') as secondary_color,
+        COALESCE(va.accent_color, '#00ff7f') as accent_color,
+        COALESCE(va.text_on_primary, '#ffffff') as text_on_primary,
         u.username as owner_username,
         COUNT(DISTINCT vm.user_id) as member_count,
         COUNT(DISTINCT f.id) as total_flights,
@@ -375,19 +407,24 @@ router.get('/:vaId/my-stats', authMiddleware, async (req, res) => {
     const { vaId } = req.params;
     const userId = req.user.id;
 
-    // Get member stats
+    console.log('Fetching stats for user:', userId, 'in VA:', vaId); // Debug
+
+    // Get member stats with fixed subquery
     const [member] = await db.query(`
       SELECT 
-        points,
-        total_flights,
-        total_hours,
-        (SELECT COUNT(*) + 1 FROM va_members 
-         WHERE va_id = ? AND points > vm.points AND status = 'active') as rank
+        vm.points,
+        vm.total_flights,
+        vm.total_hours,
+        (SELECT COUNT(*) + 1 FROM va_members vm2
+         WHERE vm2.va_id = vm.va_id AND vm2.points > vm.points AND vm2.status = 'active') as \`rank\`
       FROM va_members vm
-      WHERE user_id = ? AND va_id = ? AND status = 'active'
-    `, [vaId, userId, vaId]);
+      WHERE vm.user_id = ? AND vm.va_id = ? AND vm.status = 'active'
+    `, [userId, vaId]);
+
+    console.log('Member stats result:', member); // Debug
 
     if (member.length === 0) {
+      console.log('No member found, returning default stats'); // Debug
       return res.json({ 
         stats: {
           total_flights: 0,
@@ -401,7 +438,8 @@ router.get('/:vaId/my-stats', authMiddleware, async (req, res) => {
     res.json({ stats: member[0] });
   } catch (error) {
     console.error('Get my stats error:', error);
-    res.status(500).json({ error: 'Failed to fetch stats' });
+    console.error('Error details:', error.message); // Debug
+    res.status(500).json({ error: 'Failed to fetch stats', details: error.message });
   }
 });
 

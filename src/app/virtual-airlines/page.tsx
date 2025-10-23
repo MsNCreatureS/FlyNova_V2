@@ -34,7 +34,11 @@ export default function VirtualAirlinesPage() {
     iata_code: '',
     icao_code: '',
     description: '',
-    logo_url: ''
+    logo_url: '',
+    primary_color: '#00c853',
+    secondary_color: '#00a843',
+    accent_color: '#00ff7f',
+    text_on_primary: '#ffffff'
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>('');
@@ -114,6 +118,12 @@ export default function VirtualAirlinesPage() {
       if (formData.icao_code) formDataToSend.append('icao_code', formData.icao_code);
       if (formData.iata_code) formDataToSend.append('iata_code', formData.iata_code);
       formDataToSend.append('description', formData.description);
+      
+      // Add branding colors
+      formDataToSend.append('primary_color', formData.primary_color);
+      formDataToSend.append('secondary_color', formData.secondary_color);
+      formDataToSend.append('accent_color', formData.accent_color);
+      formDataToSend.append('text_on_primary', formData.text_on_primary);
       
       // Add logo file or URL
       if (logoFile) {
@@ -418,6 +428,131 @@ export default function VirtualAirlinesPage() {
                       className="w-full px-4 py-3 rounded-lg border-2 border-slate-300 bg-white focus:border-aviation-500 focus:ring-2 focus:ring-aviation-200 outline-none disabled:bg-slate-100 disabled:text-slate-500 transition-all"
                       disabled={!!logoFile}
                     />
+                  </div>
+                </div>
+              </div>
+
+              {/* Branding Colors */}
+              <div className="bg-white p-4 rounded-lg border-2 border-slate-300">
+                <label className="block text-sm font-semibold text-slate-900 mb-3">
+                  🎨 Brand Colors
+                </label>
+                <p className="text-xs text-slate-600 mb-4">
+                  Customize your airline's color scheme. These colors will be used throughout your VA dashboard.
+                </p>
+                
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-2">Primary Color</label>
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="color"
+                        value={formData.primary_color}
+                        onChange={(e) => setFormData({...formData, primary_color: e.target.value})}
+                        className="w-16 h-12 rounded-lg border-2 border-slate-300 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={formData.primary_color}
+                        onChange={(e) => setFormData({...formData, primary_color: e.target.value})}
+                        placeholder="#00c853"
+                        pattern="^#[0-9A-Fa-f]{6}$"
+                        className="flex-1 px-4 py-3 rounded-lg border-2 border-slate-300 bg-white focus:border-aviation-500 focus:ring-2 focus:ring-aviation-200 outline-none font-mono text-sm transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-2">Secondary Color</label>
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="color"
+                        value={formData.secondary_color}
+                        onChange={(e) => setFormData({...formData, secondary_color: e.target.value})}
+                        className="w-16 h-12 rounded-lg border-2 border-slate-300 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={formData.secondary_color}
+                        onChange={(e) => setFormData({...formData, secondary_color: e.target.value})}
+                        placeholder="#00a843"
+                        pattern="^#[0-9A-Fa-f]{6}$"
+                        className="flex-1 px-4 py-3 rounded-lg border-2 border-slate-300 bg-white focus:border-aviation-500 focus:ring-2 focus:ring-aviation-200 outline-none font-mono text-sm transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-2">Accent Color</label>
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="color"
+                        value={formData.accent_color}
+                        onChange={(e) => setFormData({...formData, accent_color: e.target.value})}
+                        className="w-16 h-12 rounded-lg border-2 border-slate-300 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={formData.accent_color}
+                        onChange={(e) => setFormData({...formData, accent_color: e.target.value})}
+                        placeholder="#00ff7f"
+                        pattern="^#[0-9A-Fa-f]{6}$"
+                        className="flex-1 px-4 py-3 rounded-lg border-2 border-slate-300 bg-white focus:border-aviation-500 focus:ring-2 focus:ring-aviation-200 outline-none font-mono text-sm transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-2">Text on Primary</label>
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="color"
+                        value={formData.text_on_primary}
+                        onChange={(e) => setFormData({...formData, text_on_primary: e.target.value})}
+                        className="w-16 h-12 rounded-lg border-2 border-slate-300 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={formData.text_on_primary}
+                        onChange={(e) => setFormData({...formData, text_on_primary: e.target.value})}
+                        placeholder="#ffffff"
+                        pattern="^#[0-9A-Fa-f]{6}$"
+                        className="flex-1 px-4 py-3 rounded-lg border-2 border-slate-300 bg-white focus:border-aviation-500 focus:ring-2 focus:ring-aviation-200 outline-none font-mono text-sm transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Color Preview */}
+                <div className="mt-4 p-4 rounded-lg border-2 border-slate-200 bg-slate-50">
+                  <p className="text-xs font-medium text-slate-700 mb-3">Preview:</p>
+                  <div className="flex items-center space-x-3">
+                    <button
+                      type="button"
+                      style={{ 
+                        backgroundColor: formData.primary_color,
+                        color: formData.text_on_primary
+                      }}
+                      className="px-4 py-2 rounded-lg font-semibold text-sm"
+                    >
+                      Primary Button
+                    </button>
+                    <button
+                      type="button"
+                      style={{ 
+                        backgroundColor: formData.secondary_color,
+                        color: formData.text_on_primary
+                      }}
+                      className="px-4 py-2 rounded-lg font-semibold text-sm"
+                    >
+                      Secondary
+                    </button>
+                    <div 
+                      style={{ backgroundColor: formData.accent_color }}
+                      className="px-3 py-1 rounded text-white text-xs font-semibold"
+                    >
+                      Accent
+                    </div>
                   </div>
                 </div>
               </div>

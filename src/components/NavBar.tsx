@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
+import { useBranding } from '@/contexts/BrandingContext';
+import { useVABranding } from '@/hooks/useVABranding';
 
 interface User {
   id: number;
@@ -24,11 +26,15 @@ export default function NavBar() {
   const [user, setUser] = useState<User | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeFlight, setActiveFlight] = useState<ActiveFlight | null>(null);
+  const { logoUrl, vaName } = useBranding();
 
   // Détecter si on est dans un dashboard VA
   const vaMatch = pathname.match(/\/va\/(\d+)\/(pilot|manage)/);
   const isInVADashboard = !!vaMatch;
   const currentVaId = vaMatch ? vaMatch[1] : null;
+
+  // Charger le branding de la VA si dans un dashboard VA
+  useVABranding(currentVaId);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -96,10 +102,23 @@ export default function NavBar() {
       <div className="max-w-7xl mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-            <img src="/logo.png" alt="FlyNova" className="h-10 w-auto" />
-            <span className="text-2xl font-bold text-aviation-600">
-              Fly<span className="text-slate-900">Nova</span>
-            </span>
+            {isInVADashboard && logoUrl ? (
+              <>
+                <img src={logoUrl} alt={vaName || 'Virtual Airline'} className="h-10 w-auto object-contain" />
+                {vaName && (
+                  <span className="text-2xl font-bold" style={{ color: 'var(--color-primary)' }}>
+                    {vaName}
+                  </span>
+                )}
+              </>
+            ) : (
+              <>
+                <img src="/logo.png" alt="FlyNova" className="h-10 w-auto" />
+                <span className="text-2xl font-bold text-aviation-600">
+                  Fly<span className="text-slate-900">Nova</span>
+                </span>
+              </>
+            )}
           </Link>
           
           {/* Desktop Navigation */}
@@ -200,17 +219,11 @@ export default function NavBar() {
           <div className="flex items-center space-x-4">
             {user ? (
               <>
-                <Link href={`/profile/${user.id}`} className="hidden sm:block text-right">
-                  <p className="text-sm font-semibold text-slate-900 hover:text-aviation-600 transition-colors">
-                    {user.username}
-                  </p>
-                  <p className="text-xs text-slate-500">{user.email}</p>
-                </Link>
-                <Link href={`/profile/${user.id}`}>
+                <Link href={`/profile/${user.id}`} className="hover:opacity-80 transition-opacity" title={user.username}>
                   {user.avatar_url ? (
-                    <img src={user.avatar_url} alt={user.username} className="w-10 h-10 rounded-full ring-2 ring-aviation-100" />
+                    <img src={user.avatar_url} alt={user.username} className="w-10 h-10 rounded-full ring-2 ring-aviation-100 hover:ring-aviation-300 transition-all" />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-aviation-600 flex items-center justify-center text-white font-bold ring-2 ring-aviation-100">
+                    <div className="w-10 h-10 rounded-full bg-aviation-600 flex items-center justify-center text-white font-bold ring-2 ring-aviation-100 hover:ring-aviation-300 transition-all">
                       {user.username.charAt(0).toUpperCase()}
                     </div>
                   )}

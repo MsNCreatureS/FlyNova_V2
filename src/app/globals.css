@@ -5,6 +5,16 @@
 /* Leaflet CSS */
 @import 'leaflet/dist/leaflet.css';
 
+/* Dynamic VA Branding Variables */
+:root {
+  --color-primary: #00c853;
+  --color-secondary: #00a843;
+  --color-accent: #00ff7f;
+  --color-text-on-primary: #ffffff;
+  --color-primary-light: rgba(0, 200, 83, 0.1);
+  --color-primary-medium: rgba(0, 200, 83, 0.3);
+}
+
 /* Custom styles for Leaflet tooltips */
 .waypoint-label {
   background-color: rgba(30, 41, 59, 0.95) !important;
@@ -55,6 +65,67 @@
   
   .aviation-gradient {
     @apply bg-gradient-to-br from-aviation-600 to-aviation-800;
+  }
+
+  /* Dynamic VA Branding Styles */
+  .btn-va-primary {
+    background-color: var(--color-primary);
+    color: var(--color-text-on-primary);
+    @apply px-6 py-3 rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg;
+  }
+  
+  .btn-va-primary:hover {
+    filter: brightness(0.9);
+  }
+
+  .btn-va-secondary {
+    background-color: var(--color-secondary);
+    color: var(--color-text-on-primary);
+    @apply px-6 py-3 rounded-lg font-semibold transition-all duration-200;
+  }
+
+  .btn-va-secondary:hover {
+    filter: brightness(0.9);
+  }
+
+  .text-va-primary {
+    color: var(--color-primary);
+  }
+
+  .text-va-secondary {
+    color: var(--color-secondary);
+  }
+
+  .text-va-accent {
+    color: var(--color-accent);
+  }
+
+  .bg-va-primary {
+    background-color: var(--color-primary);
+  }
+
+  .bg-va-secondary {
+    background-color: var(--color-secondary);
+  }
+
+  .bg-va-accent {
+    background-color: var(--color-accent);
+  }
+
+  .bg-va-primary-light {
+    background-color: var(--color-primary-light);
+  }
+
+  .bg-va-primary-medium {
+    background-color: var(--color-primary-medium);
+  }
+
+  .border-va-primary {
+    border-color: var(--color-primary);
+  }
+
+  .border-va-secondary {
+    border-color: var(--color-secondary);
   }
 }
 

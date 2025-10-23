@@ -55,6 +55,10 @@ export default function BookFlightPage() {
 
   // Modal state
   const [showBookingModal, setShowBookingModal] = useState(false);
+  
+  // Aircraft search/filter in modal
+  const [aircraftSearchTerm, setAircraftSearchTerm] = useState('');
+  const [aircraftFilterType, setAircraftFilterType] = useState<string>('all');
 
   useEffect(() => {
     if (vaId) {
@@ -149,9 +153,28 @@ export default function BookFlightPage() {
     return matchesSearch && matchesType;
   });
 
-  const availableAircraft = selectedRoute?.aircraft_type
+  // Filter aircraft based on route requirements and search
+  let availableAircraft = selectedRoute?.aircraft_type
     ? fleet.filter(a => a.aircraft_type === selectedRoute.aircraft_type)
     : fleet;
+
+  // Apply search and filters to aircraft
+  if (aircraftSearchTerm || aircraftFilterType !== 'all') {
+    availableAircraft = availableAircraft.filter(aircraft => {
+      const matchesSearch = 
+        aircraft.registration.toLowerCase().includes(aircraftSearchTerm.toLowerCase()) ||
+        aircraft.aircraft_name.toLowerCase().includes(aircraftSearchTerm.toLowerCase()) ||
+        aircraft.aircraft_type.toLowerCase().includes(aircraftSearchTerm.toLowerCase()) ||
+        aircraft.home_airport.toLowerCase().includes(aircraftSearchTerm.toLowerCase());
+      
+      const matchesType = aircraftFilterType === 'all' || aircraft.aircraft_type === aircraftFilterType;
+      
+      return matchesSearch && matchesType;
+    });
+  }
+
+  // Get unique aircraft types for filter dropdown
+  const aircraftTypes = Array.from(new Set(fleet.map(a => a.aircraft_type))).sort();
 
   const getRouteTypeIcon = (type: string) => {
     switch (type) {
@@ -266,6 +289,8 @@ export default function BookFlightPage() {
                   onClick={() => {
                     setSelectedRoute(route);
                     setSelectedAircraft(null);
+                    setAircraftSearchTerm('');
+                    setAircraftFilterType('all');
                     setShowBookingModal(true);
                   }}
                 >
@@ -352,7 +377,11 @@ export default function BookFlightPage() {
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-3xl font-bold text-slate-900">✈️ Book Flight</h2>
                   <button
-                    onClick={() => setShowBookingModal(false)}
+                    onClick={() => {
+                      setShowBookingModal(false);
+                      setAircraftSearchTerm('');
+                      setAircraftFilterType('all');
+                    }}
                     className="text-slate-400 hover:text-slate-600 text-2xl"
                   >
                     ✕
@@ -399,9 +428,47 @@ export default function BookFlightPage() {
 
                 {/* Aircraft Selection */}
                 <div className="mb-6">
-                  <label className="block text-sm font-semibold text-slate-700 mb-3">
-                    Select Aircraft {selectedRoute.aircraft_type && `(${selectedRoute.aircraft_type} only)`}
-                  </label>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="block text-sm font-semibold text-slate-700">
+                      Select Aircraft {selectedRoute.aircraft_type && `(${selectedRoute.aircraft_type} only)`}
+                    </label>
+                    <p className="text-sm text-slate-500">
+                      {availableAircraft.length} available
+                    </p>
+                  </div>
+
+                  {/* Aircraft Search & Filters */}
+                  {fleet.length > 5 && (
+                    <div className="grid md:grid-cols-2 gap-3 mb-4">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="🔍 Search registration, type, base..."
+                          value={aircraftSearchTerm}
+                          onChange={(e) => setAircraftSearchTerm(e.target.value)}
+                          className="w-full px-4 py-2 bg-white border-2 border-slate-300 rounded-lg focus:outline-none focus:border-aviation-500 text-sm"
+                        />
+                        {aircraftSearchTerm && (
+                          <button
+                            onClick={() => setAircraftSearchTerm('')}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                      <select
+                        value={aircraftFilterType}
+                        onChange={(e) => setAircraftFilterType(e.target.value)}
+                        className="px-4 py-2 bg-white border-2 border-slate-300 rounded-lg focus:outline-none focus:border-aviation-500 text-sm"
+                      >
+                        <option value="all">All Aircraft Types</option>
+                        {aircraftTypes.map(type => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   
                   {availableAircraft.length > 0 ? (
                     <div className="grid md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
@@ -419,7 +486,9 @@ export default function BookFlightPage() {
                             <div className="flex-1">
                               <p className="font-bold text-slate-900">{aircraft.registration}</p>
                               <p className="text-sm text-slate-600">{aircraft.aircraft_name}</p>
-                              <p className="text-xs text-slate-500 mt-1">🏠 {aircraft.home_airport}</p>
+                              <p className="text-xs text-slate-500 mt-1">
+                                <span className="font-semibold">{aircraft.aircraft_type}</span> • 🏠 {aircraft.home_airport}
+                              </p>
                             </div>
                             {selectedAircraft === aircraft.id && (
                               <div className="text-2xl text-aviation-600">✓</div>
@@ -430,8 +499,27 @@ export default function BookFlightPage() {
                     </div>
                   ) : (
                     <div className="card p-6 text-center text-slate-500">
-                      <p>No available aircraft for this route type</p>
-                      <p className="text-sm mt-2">Please select a different route or contact an administrator</p>
+                      <p>
+                        {aircraftSearchTerm || aircraftFilterType !== 'all'
+                          ? '🔍 No aircraft matching your search'
+                          : 'No available aircraft for this route'}
+                      </p>
+                      <p className="text-sm mt-2">
+                        {aircraftSearchTerm || aircraftFilterType !== 'all'
+                          ? 'Try adjusting your search filters'
+                          : 'Please select a different route or contact an administrator'}
+                      </p>
+                      {(aircraftSearchTerm || aircraftFilterType !== 'all') && (
+                        <button
+                          onClick={() => {
+                            setAircraftSearchTerm('');
+                            setAircraftFilterType('all');
+                          }}
+                          className="mt-3 px-4 py-2 bg-aviation-600 text-white rounded-lg hover:bg-aviation-700 transition-colors text-sm"
+                        >
+                          Clear Filters
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -439,7 +527,11 @@ export default function BookFlightPage() {
                 {/* Actions */}
                 <div className="flex gap-4">
                   <button
-                    onClick={() => setShowBookingModal(false)}
+                    onClick={() => {
+                      setShowBookingModal(false);
+                      setAircraftSearchTerm('');
+                      setAircraftFilterType('all');
+                    }}
                     className="flex-1 px-6 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-lg hover:bg-slate-100 transition-colors"
                   >
                     Cancel

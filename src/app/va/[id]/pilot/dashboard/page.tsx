@@ -98,9 +98,14 @@ export default function PilotDashboard() {
 
       // Fetch active events
       const eventsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/events/va/${vaId}/active`, { headers });
+      console.log('Events response status:', eventsResponse.status); // Debug
       if (eventsResponse.ok) {
         const eventsData = await eventsResponse.json();
+        console.log('Events data received:', eventsData); // Debug
+        console.log('Number of events:', eventsData.events?.length || 0); // Debug
         setEvents(eventsData.events || []);
+      } else {
+        console.error('Failed to fetch events:', eventsResponse.status, await eventsResponse.text());
       }
 
       // Fetch active flights by other pilots
@@ -214,7 +219,7 @@ export default function PilotDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 mb-1">Total Flights</p>
-                <p className="text-3xl font-bold text-slate-900">{stats?.total_flights || 0}</p>
+                <p className="text-3xl font-bold text-slate-900">{Number(stats?.total_flights || 0)}</p>
               </div>
               <div className="text-4xl">✈️</div>
             </div>
@@ -229,7 +234,7 @@ export default function PilotDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 mb-1">Flight Hours</p>
-                <p className="text-3xl font-bold text-slate-900">{stats?.total_hours?.toFixed(1) || 0}</p>
+                <p className="text-3xl font-bold text-slate-900">{stats?.total_hours ? Number(stats.total_hours).toFixed(1) : '0.0'}</p>
               </div>
               <div className="text-4xl">⏱️</div>
             </div>
@@ -244,7 +249,7 @@ export default function PilotDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 mb-1">Points</p>
-                <p className="text-3xl font-bold text-yellow-600">{stats?.points || 0}</p>
+                <p className="text-3xl font-bold text-yellow-600">{Number(stats?.points || 0)}</p>
               </div>
               <div className="text-4xl">⭐</div>
             </div>
@@ -370,6 +375,17 @@ export default function PilotDashboard() {
               <p className="text-slate-600">Check back later for upcoming events!</p>
             </div>
           )}
+          
+          {/* Maintenance Notice */}
+          <div className="mt-4 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+            <div className="flex items-center gap-3">
+              <div className="text-2xl">🔧</div>
+              <div>
+                <h4 className="text-sm font-semibold text-yellow-800">Events Under Maintenance</h4>
+                <p className="text-sm text-yellow-700">The events system is currently being optimized. Some features may be temporarily unavailable.</p>
+              </div>
+            </div>
+          </div>
         </motion.div>
 
         {/* Active Flights by Other Pilots */}

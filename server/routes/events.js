@@ -59,6 +59,33 @@ router.get('/va/:vaId/active', async (req, res) => {
     const { vaId } = req.params;
     const now = new Date().toISOString();
 
+    console.log('Fetching active events for VA:', vaId, 'at time:', now); // Debug
+
+    // Auto-update event statuses based on dates
+    const [updateResult] = await db.query(`
+      UPDATE events 
+      SET status = CASE
+        WHEN start_date <= ? AND end_date >= ? AND status != 'cancelled' THEN 'active'
+        WHEN start_date > ? AND status != 'cancelled' THEN 'upcoming'
+        WHEN end_date < ? AND status != 'cancelled' THEN 'completed'
+        ELSE status
+      END
+      WHERE va_id = ?
+    `, [now, now, now, now, vaId]);
+
+    console.log('Updated event statuses, affected rows:', updateResult.affectedRows); // Debug
+
+    // Check all events for this VA (debug)
+    const [allEvents] = await db.query(`
+      SELECT id, name, status, start_date, end_date
+      FROM events
+      WHERE va_id = ?
+      ORDER BY start_date DESC
+    `, [vaId]);
+    
+    console.log('All events for VA', vaId, ':', allEvents); // Debug
+
+    // Fetch active events
     const [events] = await db.query(`
       SELECT e.*, a.icao_code as focus_airport_icao
       FROM events e
@@ -69,6 +96,8 @@ router.get('/va/:vaId/active', async (req, res) => {
         AND e.end_date >= ?
       ORDER BY e.start_date ASC
     `, [vaId, now, now]);
+
+    console.log('Active events found:', events.length); // Debug
 
     res.json({ events });
   } catch (error) {
