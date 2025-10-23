@@ -34,7 +34,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-
+# Uploads
+/public/uploads/*
+!/public/uploads/.gitkeep
 
 # Logs
 logs

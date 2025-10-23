@@ -11,18 +11,35 @@ interface User {
   avatar_url?: string;
 }
 
+interface ActiveFlight {
+  id: number;
+  flight_number: string;
+  status: 'reserved' | 'in_progress';
+  va_id: number;
+}
+
 export default function NavBar() {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeFlight, setActiveFlight] = useState<ActiveFlight | null>(null);
+
+  // Détecter si on est dans un dashboard VA
+  const vaMatch = pathname.match(/\/va\/(\d+)\/(pilot|manage)/);
+  const isInVADashboard = !!vaMatch;
+  const currentVaId = vaMatch ? vaMatch[1] : null;
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
       fetchUser();
+      if (isInVADashboard && currentVaId) {
+        console.log('Fetching active flight for VA:', currentVaId); // Debug
+        fetchActiveFlight();
+      }
     }
-  }, []);
+  }, [pathname, isInVADashboard, currentVaId]);
 
   const fetchUser = async () => {
     try {
@@ -36,6 +53,33 @@ export default function NavBar() {
       }
     } catch (error) {
       console.error('Failed to fetch user:', error);
+    }
+  };
+
+  const fetchActiveFlight = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/flights/my-flights`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        console.log('All flights:', data.flights); // Debug
+        console.log('Current VA ID:', currentVaId); // Debug
+        
+        // Trouver le vol actif pour cette VA
+        const flight = data.flights?.find((f: any) => 
+          f.va_id === parseInt(currentVaId || '0') && 
+          (f.status === 'reserved' || f.status === 'in_progress')
+        );
+        
+        console.log('Found active flight:', flight); // Debug
+        setActiveFlight(flight || null);
+      } else {
+        console.error('Failed to fetch flights:', response.status);
+      }
+    } catch (error) {
+      console.error('Failed to fetch active flight:', error);
     }
   };
 
@@ -62,38 +106,87 @@ export default function NavBar() {
           <nav className="hidden md:flex items-center space-x-6">
             {user ? (
               <>
-                <Link 
-                  href="/dashboard" 
-                  className={`font-semibold transition-colors ${
-                    isActive('/dashboard') ? 'text-aviation-600' : 'text-slate-600 hover:text-aviation-600'
-                  }`}
-                >
-                  Dashboard
-                </Link>
-                <Link 
-                  href="/virtual-airlines" 
-                  className={`font-semibold transition-colors ${
-                    isActive('/virtual-airlines') ? 'text-aviation-600' : 'text-slate-600 hover:text-aviation-600'
-                  }`}
-                >
-                  Virtual Airlines
-                </Link>
-                <Link 
-                  href="/tracker" 
-                  className={`font-semibold transition-colors ${
-                    isActive('/tracker') ? 'text-aviation-600' : 'text-slate-600 hover:text-aviation-600'
-                  }`}
-                >
-                  Tracker
-                </Link>
-                <Link 
-                  href="/downloads" 
-                  className={`font-semibold transition-colors ${
-                    isActive('/downloads') ? 'text-aviation-600' : 'text-slate-600 hover:text-aviation-600'
-                  }`}
-                >
-                  Downloads
-                </Link>
+                {isInVADashboard && currentVaId ? (
+                  // Navigation simplifiée pour les pilotes/membres dans un dashboard VA
+                  <>
+                    <Link 
+                      href={`/va/${currentVaId}/pilot/dashboard`}
+                      className={`font-semibold transition-colors ${
+                        pathname.includes('/pilot/dashboard') ? 'text-aviation-600' : 'text-slate-600 hover:text-aviation-600'
+                      }`}
+                    >
+                      🏠 Home
+                    </Link>
+                    <Link 
+                      href={`/va/${currentVaId}/pilot/book-flight`}
+                      className={`font-semibold transition-colors ${
+                        pathname.includes('/book-flight') ? 'text-aviation-600' : 'text-slate-600 hover:text-aviation-600'
+                      }`}
+                    >
+                      ✈️ Book Flight
+                    </Link>
+                    {activeFlight && (
+                      <Link 
+                        href={`/va/${currentVaId}/pilot/briefing/${activeFlight.id}`}
+                        className={`font-semibold transition-colors ${
+                          pathname.includes('/briefing/') ? 'text-aviation-600' : 'text-slate-600 hover:text-aviation-600'
+                        }`}
+                      >
+                        📋 Briefing
+                      </Link>
+                    )}
+                    <Link 
+                      href={`/va/${currentVaId}/pilot/downloads`}
+                      className={`font-semibold transition-colors ${
+                        pathname.includes('/downloads') ? 'text-aviation-600' : 'text-slate-600 hover:text-aviation-600'
+                      }`}
+                    >
+                      📥 Downloads
+                    </Link>
+                    <Link 
+                      href="/dashboard"
+                      className="font-semibold text-slate-600 hover:text-aviation-600 transition-colors"
+                    >
+                      ← Back to My VAs
+                    </Link>
+                  </>
+                ) : (
+                  // Navigation normale
+                  <>
+                    <Link 
+                      href="/dashboard" 
+                      className={`font-semibold transition-colors ${
+                        isActive('/dashboard') ? 'text-aviation-600' : 'text-slate-600 hover:text-aviation-600'
+                      }`}
+                    >
+                      Dashboard
+                    </Link>
+                    <Link 
+                      href="/virtual-airlines" 
+                      className={`font-semibold transition-colors ${
+                        isActive('/virtual-airlines') ? 'text-aviation-600' : 'text-slate-600 hover:text-aviation-600'
+                      }`}
+                    >
+                      Virtual Airlines
+                    </Link>
+                    <Link 
+                      href="/tracker" 
+                      className={`font-semibold transition-colors ${
+                        isActive('/tracker') ? 'text-aviation-600' : 'text-slate-600 hover:text-aviation-600'
+                      }`}
+                    >
+                      Tracker
+                    </Link>
+                    <Link 
+                      href="/downloads" 
+                      className={`font-semibold transition-colors ${
+                        isActive('/downloads') ? 'text-aviation-600' : 'text-slate-600 hover:text-aviation-600'
+                      }`}
+                    >
+                      Downloads
+                    </Link>
+                  </>
+                )}
               </>
             ) : (
               <>
@@ -161,10 +254,51 @@ export default function NavBar() {
           <nav className="md:hidden mt-4 pb-4 border-t border-slate-200 pt-4 space-y-3">
             {user ? (
               <>
-                <Link href="/dashboard" className="block text-slate-700 hover:text-aviation-600 font-semibold">Dashboard</Link>
-                <Link href="/virtual-airlines" className="block text-slate-700 hover:text-aviation-600 font-semibold">Virtual Airlines</Link>
-                <Link href="/tracker" className="block text-slate-700 hover:text-aviation-600 font-semibold">Tracker</Link>
-                <Link href="/downloads" className="block text-slate-700 hover:text-aviation-600 font-semibold">Downloads</Link>
+                {isInVADashboard && currentVaId ? (
+                  // Navigation mobile pour VA dashboard
+                  <>
+                    <Link 
+                      href={`/va/${currentVaId}/pilot/dashboard`}
+                      className="block text-slate-700 hover:text-aviation-600 font-semibold"
+                    >
+                      🏠 Home
+                    </Link>
+                    <Link 
+                      href={`/va/${currentVaId}/pilot/book-flight`}
+                      className="block text-slate-700 hover:text-aviation-600 font-semibold"
+                    >
+                      ✈️ Book Flight
+                    </Link>
+                    {activeFlight && (
+                      <Link 
+                        href={`/va/${currentVaId}/pilot/briefing/${activeFlight.id}`}
+                        className="block text-slate-700 hover:text-aviation-600 font-semibold"
+                      >
+                        📋 Briefing
+                      </Link>
+                    )}
+                    <Link 
+                      href={`/va/${currentVaId}/pilot/downloads`}
+                      className="block text-slate-700 hover:text-aviation-600 font-semibold"
+                    >
+                      📥 Downloads
+                    </Link>
+                    <Link 
+                      href="/dashboard"
+                      className="block text-slate-700 hover:text-aviation-600 font-semibold"
+                    >
+                      ← Back to My VAs
+                    </Link>
+                  </>
+                ) : (
+                  // Navigation mobile normale
+                  <>
+                    <Link href="/dashboard" className="block text-slate-700 hover:text-aviation-600 font-semibold">Dashboard</Link>
+                    <Link href="/virtual-airlines" className="block text-slate-700 hover:text-aviation-600 font-semibold">Virtual Airlines</Link>
+                    <Link href="/tracker" className="block text-slate-700 hover:text-aviation-600 font-semibold">Tracker</Link>
+                    <Link href="/downloads" className="block text-slate-700 hover:text-aviation-600 font-semibold">Downloads</Link>
+                  </>
+                )}
                 <Link href={`/profile/${user.id}`} className="block text-slate-700 hover:text-aviation-600 font-semibold">My Profile</Link>
               </>
             ) : (

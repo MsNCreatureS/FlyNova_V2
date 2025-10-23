@@ -138,6 +138,7 @@ CREATE TABLE IF NOT EXISTS flights (
     departure_time TIMESTAMP NULL,
     arrival_time TIMESTAMP NULL,
     reserved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    simbrief_ofp_id VARCHAR(50) NULL COMMENT 'SimBrief OFP ID for flight plan',
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (va_id) REFERENCES virtual_airlines(id) ON DELETE CASCADE,
     FOREIGN KEY (route_id) REFERENCES va_routes(id) ON DELETE RESTRICT,
@@ -145,7 +146,8 @@ CREATE TABLE IF NOT EXISTS flights (
     INDEX idx_user (user_id),
     INDEX idx_va (va_id),
     INDEX idx_status (status),
-    INDEX idx_departure_time (departure_time)
+    INDEX idx_departure_time (departure_time),
+    INDEX idx_simbrief (simbrief_ofp_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Flight Reports (Telemetry and Validation)

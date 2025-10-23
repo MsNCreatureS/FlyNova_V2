@@ -369,4 +369,40 @@ router.delete('/:vaId/members/:memberId', authMiddleware, checkVARole(['Owner', 
   }
 });
 
+// Get my stats for a VA
+router.get('/:vaId/my-stats', authMiddleware, async (req, res) => {
+  try {
+    const { vaId } = req.params;
+    const userId = req.user.id;
+
+    // Get member stats
+    const [member] = await db.query(`
+      SELECT 
+        points,
+        total_flights,
+        total_hours,
+        (SELECT COUNT(*) + 1 FROM va_members 
+         WHERE va_id = ? AND points > vm.points AND status = 'active') as rank
+      FROM va_members vm
+      WHERE user_id = ? AND va_id = ? AND status = 'active'
+    `, [vaId, userId, vaId]);
+
+    if (member.length === 0) {
+      return res.json({ 
+        stats: {
+          total_flights: 0,
+          total_hours: 0,
+          points: 0,
+          rank: null
+        }
+      });
+    }
+
+    res.json({ stats: member[0] });
+  } catch (error) {
+    console.error('Get my stats error:', error);
+    res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
 module.exports = router;

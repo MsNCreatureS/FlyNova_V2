@@ -26,8 +26,9 @@ router.get('/:userId', async (req, res) => {
       SELECT 
         vm.*,
         va.name as va_name,
-        va.callsign,
-        va.logo_url
+        va.callsign as va_callsign,
+        va.logo_url as va_logo_url,
+        (SELECT COUNT(*) FROM va_members WHERE va_id = vm.va_id AND status = 'active') as member_count
       FROM va_members vm
       JOIN virtual_airlines va ON vm.va_id = va.id
       WHERE vm.user_id = ? AND vm.status = 'active'

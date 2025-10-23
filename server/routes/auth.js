@@ -9,7 +9,7 @@ const router = express.Router();
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { email, username, password, firstName, lastName } = req.body;
+    const { email, username, password, firstName, lastName, simbriefUsername } = req.body;
 
     // Validate input
     if (!email || !username || !password) {
@@ -31,8 +31,8 @@ router.post('/register', async (req, res) => {
 
     // Create user
     const [result] = await db.query(
-      'INSERT INTO users (email, username, password_hash, first_name, last_name) VALUES (?, ?, ?, ?, ?)',
-      [email, username, passwordHash, firstName || null, lastName || null]
+      'INSERT INTO users (email, username, password_hash, first_name, last_name, simbrief_username) VALUES (?, ?, ?, ?, ?, ?)',
+      [email, username, passwordHash, firstName || null, lastName || null, simbriefUsername || null]
     );
 
     // Generate token
@@ -50,7 +50,8 @@ router.post('/register', async (req, res) => {
         email,
         username,
         firstName,
-        lastName
+        lastName,
+        simbriefUsername
       }
     });
   } catch (error) {
@@ -70,7 +71,7 @@ router.post('/login', async (req, res) => {
 
     // Find user
     const [users] = await db.query(
-      'SELECT id, email, username, password_hash, first_name, last_name, avatar_url, status FROM users WHERE email = ?',
+      'SELECT id, email, username, password_hash, first_name, last_name, avatar_url, status, simbrief_username FROM users WHERE email = ?',
       [email]
     );
 
@@ -109,7 +110,8 @@ router.post('/login', async (req, res) => {
         username: user.username,
         firstName: user.first_name,
         lastName: user.last_name,
-        avatarUrl: user.avatar_url
+        avatarUrl: user.avatar_url,
+        simbriefUsername: user.simbrief_username
       }
     });
   } catch (error) {
@@ -122,7 +124,7 @@ router.post('/login', async (req, res) => {
 router.get('/me', authMiddleware, async (req, res) => {
   try {
     const [users] = await db.query(
-      'SELECT id, email, username, first_name, last_name, avatar_url, created_at FROM users WHERE id = ?',
+      'SELECT id, email, username, first_name, last_name, avatar_url, created_at, simbrief_username FROM users WHERE id = ?',
       [req.user.id]
     );
 

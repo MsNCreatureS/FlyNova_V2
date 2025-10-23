@@ -2,6 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Leaflet CSS */
+@import 'leaflet/dist/leaflet.css';
+
+/* Custom styles for Leaflet tooltips */
+.waypoint-label {
+  background-color: rgba(30, 41, 59, 0.95) !important;
+  border: 1px solid rgba(148, 163, 184, 0.3) !important;
+  border-radius: 4px !important;
+  padding: 2px 6px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #e2e8f0 !important;
+}
+
+.waypoint-label::before {
+  border-top-color: rgba(30, 41, 59, 0.95) !important;
+}
+
+.custom-square-marker {
+  background: none !important;
+  border: none !important;
+}
+
 @layer base {
   body {
     @apply bg-slate-50 text-slate-900;

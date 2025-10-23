@@ -12,7 +12,8 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
     firstName: '',
-    lastName: ''
+    lastName: '',
+    simbriefUsername: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -42,7 +43,8 @@ export default function RegisterPage() {
           username: formData.username,
           password: formData.password,
           firstName: formData.firstName,
-          lastName: formData.lastName
+          lastName: formData.lastName,
+          simbriefUsername: formData.simbriefUsername
         })
       });
 
@@ -133,6 +135,23 @@ export default function RegisterPage() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
+            </div>
+
+            <div>
+              <label htmlFor="simbriefUsername" className="block text-sm font-medium text-slate-700 mb-2">
+                SimBrief Username <span className="text-slate-500 text-xs">(Optional)</span>
+              </label>
+              <input
+                type="text"
+                id="simbriefUsername"
+                className="input-field"
+                placeholder="Your SimBrief username"
+                value={formData.simbriefUsername}
+                onChange={(e) => setFormData({ ...formData, simbriefUsername: e.target.value })}
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                Save your SimBrief username to auto-fill flight plans
+              </p>
             </div>
 
             <div>

@@ -39,8 +39,9 @@ router.get('/:vaId', async (req, res) => {
     const { vaId } = req.params;
 
     const [events] = await db.query(`
-      SELECT *
-      FROM events
+      SELECT e.*, a.icao_code as focus_airport_icao
+      FROM events e
+      LEFT JOIN airports a ON e.focus_airport_id = a.id
       WHERE va_id = ?
       ORDER BY start_date DESC
     `, [vaId]);
@@ -49,6 +50,30 @@ router.get('/:vaId', async (req, res) => {
   } catch (error) {
     console.error('Get events error:', error);
     res.status(500).json({ error: 'Failed to fetch events' });
+  }
+});
+
+// Get active VA events
+router.get('/va/:vaId/active', async (req, res) => {
+  try {
+    const { vaId } = req.params;
+    const now = new Date().toISOString();
+
+    const [events] = await db.query(`
+      SELECT e.*, a.icao_code as focus_airport_icao
+      FROM events e
+      LEFT JOIN airports a ON e.focus_airport_id = a.id
+      WHERE e.va_id = ? 
+        AND e.status = 'active'
+        AND e.start_date <= ?
+        AND e.end_date >= ?
+      ORDER BY e.start_date ASC
+    `, [vaId, now, now]);
+
+    res.json({ events });
+  } catch (error) {
+    console.error('Get active events error:', error);
+    res.status(500).json({ error: 'Failed to fetch active events' });
   }
 });
 
