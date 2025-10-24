@@ -1,8 +1,37 @@
 const express = require('express');
 const db = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
+const multer = require('multer');
+const path = require('path');
 
 const router = express.Router();
+
+// Configure multer for avatar uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'public/uploads/avatars/');
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'avatar-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'));
+    }
+  }
+});
 
 // Get user profile
 router.get('/:userId', async (req, res) => {
@@ -95,17 +124,32 @@ router.get('/:userId', async (req, res) => {
 });
 
 // Update user profile
-router.put('/me', authMiddleware, async (req, res) => {
+router.put('/me', authMiddleware, upload.single('avatar'), async (req, res) => {
   try {
     const userId = req.user.id;
-    const { firstName, lastName, avatarUrl } = req.body;
+    const { first_name, last_name, avatar_url } = req.body;
+
+    // Determine avatar URL (uploaded file or external URL)
+    let finalAvatarUrl = avatar_url || null;
+    if (req.file) {
+      finalAvatarUrl = '/uploads/avatars/' + req.file.filename;
+    }
 
     await db.query(
       'UPDATE users SET first_name = ?, last_name = ?, avatar_url = ? WHERE id = ?',
-      [firstName, lastName, avatarUrl, userId]
+      [first_name || null, last_name || null, finalAvatarUrl, userId]
     );
 
-    res.json({ message: 'Profile updated successfully' });
+    // Get updated user data
+    const [users] = await db.query(
+      'SELECT id, username, email, first_name, last_name, avatar_url FROM users WHERE id = ?',
+      [userId]
+    );
+
+    res.json({ 
+      message: 'Profile updated successfully',
+      user: users[0]
+    });
   } catch (error) {
     console.error('Update profile error:', error);
     res.status(500).json({ error: 'Failed to update profile' });

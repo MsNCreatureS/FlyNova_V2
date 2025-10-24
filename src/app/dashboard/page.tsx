@@ -123,12 +123,22 @@ export default function Dashboard() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-4xl font-bold text-slate-900 mb-2">
-            Welcome back, {user.username}! ✈️
-          </h1>
-          <p className="text-slate-600 text-lg">
-            Ready for your next flight?
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-slate-900 mb-2">
+                Welcome back, {user.username}! ✈️
+              </h1>
+              <p className="text-slate-600 text-lg">
+                Ready for your next flight?
+              </p>
+            </div>
+            <Link
+              href="/profile/edit"
+              className="btn-secondary"
+            >
+              ⚙️ Edit Profile
+            </Link>
+          </div>
         </motion.div>
 
         {/* Quick Stats */}

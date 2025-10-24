@@ -172,7 +172,7 @@ export default function ProfilePage() {
               <div className="flex items-center gap-3 mb-2">
                 <h1 className="text-4xl font-bold text-slate-900">{user.username}</h1>
                 {isOwnProfile && (
-                  <Link href="/dashboard" className="btn-secondary text-sm">
+                  <Link href="/profile/edit" className="btn-secondary text-sm">
                     ⚙️ Edit Profile
                   </Link>
                 )}
