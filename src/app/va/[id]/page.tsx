@@ -313,6 +313,9 @@ export default function VADetailPage() {
                   <div className="bg-green-100 text-green-700 px-4 py-2 rounded-lg font-semibold text-center">
                     ✓ Member ({userRole})
                   </div>
+                  <Link href={`/va/${vaId}/logbook`} className="btn-primary text-center bg-purple-600 hover:bg-purple-700">
+                    📖 My Logbook
+                  </Link>
                   {(userRole === 'Owner' || userRole === 'Admin') && (
                     <>
                       <button
@@ -323,6 +326,9 @@ export default function VADetailPage() {
                       </button>
                       <Link href={`/va/${vaId}/manage`} className="btn-primary text-center">
                         🛠️ Manage VA
+                      </Link>
+                      <Link href={`/va/${vaId}/manage/pireps`} className="btn-primary text-center bg-yellow-600 hover:bg-yellow-700">
+                        📋 Validate PIREPs
                       </Link>
                     </>
                   )}

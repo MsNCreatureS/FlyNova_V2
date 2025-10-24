@@ -282,4 +282,234 @@ router.delete('/:flightId', authMiddleware, async (req, res) => {
   }
 });
 
+// Get pilot's own flight reports for a VA
+router.get('/my-reports/:vaId', authMiddleware, async (req, res) => {
+  try {
+    const { vaId } = req.params;
+    const userId = req.user.id;
+
+    const [reports] = await db.query(`
+      SELECT 
+        fr.*,
+        f.id as flight_id,
+        vr.flight_number,
+        f.status as flight_status,
+        vr.departure_icao,
+        vr.departure_name,
+        vr.arrival_icao,
+        vr.arrival_name,
+        vfl.registration as aircraft_registration,
+        vfl.aircraft_name,
+        vfl.aircraft_type
+      FROM flight_reports fr
+      JOIN flights f ON fr.flight_id = f.id
+      JOIN va_routes vr ON f.route_id = vr.id
+      LEFT JOIN va_fleet vfl ON f.fleet_id = vfl.id
+      WHERE f.user_id = ? AND f.va_id = ?
+      ORDER BY fr.created_at DESC
+    `, [userId, vaId]);
+
+    res.json(reports);
+  } catch (error) {
+    console.error('Get pilot reports error:', error);
+    res.status(500).json({ error: 'Failed to fetch flight reports' });
+  }
+});
+
+// Get pending flight reports for a VA (Admin/Owner only)
+router.get('/va/:vaId/reports', authMiddleware, async (req, res) => {
+  try {
+    const { vaId } = req.params;
+    const { status } = req.query; // pending, approved, rejected, or all
+
+    // Check if user is admin or owner
+    const [membership] = await db.query(
+      'SELECT role FROM va_members WHERE user_id = ? AND va_id = ? AND status = "active"',
+      [req.user.id, vaId]
+    );
+
+    // Also check if user is the VA owner
+    const [va] = await db.query('SELECT owner_id FROM virtual_airlines WHERE id = ?', [vaId]);
+
+    if (membership.length === 0 && (va.length === 0 || va[0].owner_id !== req.user.id)) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    if (membership.length > 0 && !['Owner', 'Admin'].includes(membership[0].role)) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    let statusFilter = 'WHERE f.va_id = ?';
+    const params = [vaId];
+
+    if (status && status !== 'all') {
+      statusFilter += ' AND fr.validation_status = ?';
+      params.push(status);
+    }
+
+    const [reports] = await db.query(`
+      SELECT 
+        fr.*,
+        f.id as flight_id,
+        f.flight_number,
+        f.status as flight_status,
+        u.username as pilot_username,
+        u.id as pilot_id,
+        vr.departure_icao,
+        vr.departure_name,
+        vr.arrival_icao,
+        vr.arrival_name,
+        vfl.registration as aircraft_registration,
+        vfl.aircraft_name,
+        vfl.aircraft_type,
+        dep_airport.latitude as dep_lat,
+        dep_airport.longitude as dep_lon,
+        arr_airport.latitude as arr_lat,
+        arr_airport.longitude as arr_lon
+      FROM flight_reports fr
+      JOIN flights f ON fr.flight_id = f.id
+      JOIN users u ON f.user_id = u.id
+      JOIN va_routes vr ON f.route_id = vr.id
+      LEFT JOIN va_fleet vfl ON f.fleet_id = vfl.id
+      LEFT JOIN airports dep_airport ON vr.departure_icao = dep_airport.icao_code
+      LEFT JOIN airports arr_airport ON vr.arrival_icao = arr_airport.icao_code
+      ${statusFilter}
+      ORDER BY fr.created_at DESC
+    `, params);
+
+    res.json({ reports });
+  } catch (error) {
+    console.error('Get flight reports error:', error);
+    res.status(500).json({ error: 'Failed to fetch flight reports' });
+  }
+});
+
+// Get single flight report details (Admin/Owner only)
+router.get('/reports/:reportId', authMiddleware, async (req, res) => {
+  try {
+    const { reportId } = req.params;
+
+    const [reports] = await db.query(`
+      SELECT 
+        fr.*,
+        f.id as flight_id,
+        f.va_id,
+        f.flight_number,
+        f.status as flight_status,
+        u.username as pilot_username,
+        u.id as pilot_id,
+        vr.departure_icao,
+        vr.departure_name,
+        vr.arrival_icao,
+        vr.arrival_name,
+        vfl.registration as aircraft_registration,
+        vfl.aircraft_name,
+        vfl.aircraft_type,
+        dep_airport.latitude as dep_lat,
+        dep_airport.longitude as dep_lon,
+        arr_airport.latitude as arr_lat,
+        arr_airport.longitude as arr_lon
+      FROM flight_reports fr
+      JOIN flights f ON fr.flight_id = f.id
+      JOIN users u ON f.user_id = u.id
+      JOIN va_routes vr ON f.route_id = vr.id
+      LEFT JOIN va_fleet vfl ON f.fleet_id = vfl.id
+      LEFT JOIN airports dep_airport ON vr.departure_icao = dep_airport.icao_code
+      LEFT JOIN airports arr_airport ON vr.arrival_icao = arr_airport.icao_code
+      WHERE fr.id = ?
+    `, [reportId]);
+
+    if (reports.length === 0) {
+      return res.status(404).json({ error: 'Flight report not found' });
+    }
+
+    const report = reports[0];
+
+    // Check if user is admin or owner
+    const [membership] = await db.query(
+      'SELECT role FROM va_members WHERE user_id = ? AND va_id = ? AND status = "active"',
+      [req.user.id, report.va_id]
+    );
+
+    const [va] = await db.query('SELECT owner_id FROM virtual_airlines WHERE id = ?', [report.va_id]);
+
+    if (membership.length === 0 && (va.length === 0 || va[0].owner_id !== req.user.id)) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    if (membership.length > 0 && !['Owner', 'Admin'].includes(membership[0].role)) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    res.json({ report });
+  } catch (error) {
+    console.error('Get flight report error:', error);
+    res.status(500).json({ error: 'Failed to fetch flight report' });
+  }
+});
+
+// Validate flight report (Admin/Owner only)
+router.put('/reports/:reportId/validate', authMiddleware, async (req, res) => {
+  try {
+    const { reportId } = req.params;
+    const { validation_status, admin_notes, points_awarded } = req.body;
+
+    // Get report and check permissions
+    const [reports] = await db.query(`
+      SELECT fr.*, f.va_id, f.user_id
+      FROM flight_reports fr
+      JOIN flights f ON fr.flight_id = f.id
+      WHERE fr.id = ?
+    `, [reportId]);
+
+    if (reports.length === 0) {
+      return res.status(404).json({ error: 'Flight report not found' });
+    }
+
+    const report = reports[0];
+
+    // Check if user is admin or owner
+    const [membership] = await db.query(
+      'SELECT role FROM va_members WHERE user_id = ? AND va_id = ? AND status = "active"',
+      [req.user.id, report.va_id]
+    );
+
+    const [va] = await db.query('SELECT owner_id FROM virtual_airlines WHERE id = ?', [report.va_id]);
+
+    if (membership.length === 0 && (va.length === 0 || va[0].owner_id !== req.user.id)) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    if (membership.length > 0 && !['Owner', 'Admin'].includes(membership[0].role)) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Update flight report
+    await db.query(
+      `UPDATE flight_reports 
+       SET validation_status = ?, admin_id = ?, admin_notes = ?, points_awarded = ?, validated_at = NOW()
+       WHERE id = ?`,
+      [validation_status, req.user.id, admin_notes || null, points_awarded || 0, reportId]
+    );
+
+    // If approved, update member stats
+    if (validation_status === 'approved') {
+      const flightDuration = report.flight_duration || 0;
+      const hours = flightDuration / 60;
+
+      await db.query(
+        `UPDATE va_members 
+         SET points = points + ?, total_flights = total_flights + 1, total_hours = total_hours + ?
+         WHERE user_id = ? AND va_id = ?`,
+        [points_awarded || 0, hours, report.user_id, report.va_id]
+      );
+    }
+
+    res.json({ message: 'Flight report validated successfully' });
+  } catch (error) {
+    console.error('Validate flight report error:', error);
+    res.status(500).json({ error: 'Failed to validate flight report' });
+  }
+});
+
 module.exports = router;

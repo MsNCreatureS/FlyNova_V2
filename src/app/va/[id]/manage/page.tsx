@@ -720,6 +720,18 @@ export default function VAManagePage() {
             >
               🎯 Events
             </button>
+            <Link
+              href={`/va/${vaId}/manage/pireps`}
+              className="pb-4 px-2 font-semibold text-slate-500 hover:text-slate-700 transition-colors"
+            >
+              📋 PIREPs
+            </Link>
+            <Link
+              href={`/va/${vaId}/logbook`}
+              className="pb-4 px-2 font-semibold text-purple-600 hover:text-purple-700 transition-colors"
+            >
+              📖 My Logbook
+            </Link>
           </div>
         </div>
 

@@ -44,8 +44,8 @@ function MapBounds({ bounds }: { bounds: L.LatLngBounds }) {
   return null;
 }
 
-// Composant pour gérer l'affichage des labels selon le zoom
-function WaypointMarker({ waypoint, icon, showLabel }: { waypoint: Waypoint; icon: L.DivIcon; showLabel: boolean }) {
+// Composant pour gérer l'affichage des waypoints sans labels
+function WaypointMarker({ waypoint, icon }: { waypoint: Waypoint; icon: L.DivIcon }) {
   const lat = parseFloat(waypoint.pos_lat);
   const lng = parseFloat(waypoint.pos_long);
   
@@ -53,16 +53,6 @@ function WaypointMarker({ waypoint, icon, showLabel }: { waypoint: Waypoint; ico
 
   return (
     <Marker position={[lat, lng]} icon={icon}>
-      {showLabel && (
-        <Tooltip 
-          permanent 
-          direction="top" 
-          offset={[0, -5]}
-          className="waypoint-label"
-        >
-          <span className="text-xs font-semibold text-slate-900">{waypoint.ident}</span>
-        </Tooltip>
-      )}
       <Popup>
         <div className="text-center">
           <strong className="text-blue-600 text-base">{waypoint.ident}</strong>
@@ -75,29 +65,8 @@ function WaypointMarker({ waypoint, icon, showLabel }: { waypoint: Waypoint; ico
   );
 }
 
-// Composant pour gérer le zoom et l'affichage conditionnel
-function ZoomHandler({ onZoomChange }: { onZoomChange: (zoom: number) => void }) {
-  const map = useMap();
-  
-  useEffect(() => {
-    const handleZoom = () => {
-      onZoomChange(map.getZoom());
-    };
-    
-    map.on('zoomend', handleZoom);
-    handleZoom(); // Initial call
-    
-    return () => {
-      map.off('zoomend', handleZoom);
-    };
-  }, [map, onZoomChange]);
-  
-  return null;
-}
-
 export default function FlightMap({ origin, destination, waypoints, route }: FlightMapProps) {
   const [isClient, setIsClient] = useState(false);
-  const [currentZoom, setCurrentZoom] = useState(4);
 
   useEffect(() => {
     setIsClient(true);
@@ -116,9 +85,6 @@ export default function FlightMap({ origin, destination, waypoints, route }: Fli
   const originLng = parseFloat(origin.pos_long);
   const destLat = parseFloat(destination.pos_lat);
   const destLng = parseFloat(destination.pos_long);
-
-  // Afficher les labels seulement à partir du zoom 6
-  const showWaypointLabels = currentZoom >= 6;
 
   // Créer les markers personnalisés
   const createSquareIcon = (color: string, size: number = 8) => {
@@ -199,7 +165,6 @@ export default function FlightMap({ origin, destination, waypoints, route }: Fli
           />
           
           <MapBounds bounds={bounds} />
-          <ZoomHandler onZoomChange={setCurrentZoom} />
 
           {/* Marker origine */}
           <Marker position={[originLat, originLng]} icon={originIcon}>
@@ -229,13 +194,12 @@ export default function FlightMap({ origin, destination, waypoints, route }: Fli
             </Popup>
           </Marker>
 
-          {/* Waypoints avec labels conditionnels */}
+          {/* Waypoints sans labels - juste les carrés */}
           {waypoints && waypoints.map((wp, index) => (
             <WaypointMarker 
               key={index} 
               waypoint={wp} 
-              icon={waypointIcon} 
-              showLabel={showWaypointLabels}
+              icon={waypointIcon}
             />
           ))}
 

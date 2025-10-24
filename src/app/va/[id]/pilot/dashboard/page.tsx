@@ -271,52 +271,6 @@ export default function PilotDashboard() {
           </motion.div>
         </div>
 
-        {/* Quick Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="mb-8"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link href={`/va/${vaId}/pilot/book-flight`} className="card p-6 hover:shadow-lg transition-all group">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-aviation-100 rounded-full flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
-                  🎫
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-1">Book a Flight</h3>
-                  <p className="text-sm text-slate-600">Reserve your next route</p>
-                </div>
-              </div>
-            </Link>
-
-            <Link href={`/tracker`} className="card p-6 hover:shadow-lg transition-all group">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
-                  📡
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-1">Flight Tracker</h3>
-                  <p className="text-sm text-slate-600">Track your live flights</p>
-                </div>
-              </div>
-            </Link>
-
-            <Link href={`/downloads`} className="card p-6 hover:shadow-lg transition-all group">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
-                  📥
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-1">Downloads</h3>
-                  <p className="text-sm text-slate-600">Liveries & documents</p>
-                </div>
-              </div>
-            </Link>
-          </div>
-        </motion.div>
-
         {/* Active Events */}
         <motion.div
           initial={{ opacity: 0 }}

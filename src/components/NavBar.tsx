@@ -163,6 +163,14 @@ export default function NavBar() {
                       📥 Downloads
                     </Link>
                     <Link 
+                      href={`/va/${currentVaId}/logbook`}
+                      className={`font-semibold transition-colors ${
+                        pathname.includes('/logbook') ? 'text-purple-600' : 'text-purple-600 hover:text-purple-700'
+                      }`}
+                    >
+                      📖 My Logbook
+                    </Link>
+                    <Link 
                       href="/dashboard"
                       className="font-semibold text-slate-600 hover:text-aviation-600 transition-colors"
                     >
@@ -295,6 +303,12 @@ export default function NavBar() {
                       className="block text-slate-700 hover:text-aviation-600 font-semibold"
                     >
                       📥 Downloads
+                    </Link>
+                    <Link 
+                      href={`/va/${currentVaId}/logbook`}
+                      className="block text-purple-600 hover:text-purple-700 font-semibold"
+                    >
+                      📖 My Logbook
                     </Link>
                     <Link 
                       href="/dashboard"
