@@ -7,6 +7,9 @@ import AirportSearch from '@/components/AirportSearch';
 import AircraftSearch from '@/components/AircraftSearch';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { ToastContainer } from '@/components/Toast';
+import { useToast } from '@/hooks/useToast';
+import ConfirmModal from '@/components/ConfirmModal';
 
 interface FleetAircraft {
   id: number;
@@ -60,11 +63,15 @@ export default function VAManagePage() {
   const params = useParams();
   const router = useRouter();
   const vaId = params.id as string;
+  const { toasts, removeToast, success, error: showError } = useToast();
 
   const [va, setVa] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'fleet' | 'routes' | 'members' | 'events'>('fleet');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  
+  // Confirm modal
+  const [showDeleteVAModal, setShowDeleteVAModal] = useState(false);
 
   // Fleet states
   const [fleet, setFleet] = useState<FleetAircraft[]>([]);
@@ -563,6 +570,35 @@ export default function VAManagePage() {
     }
   };
 
+  const handleDeleteVA = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/auth/login');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/virtual-airlines/${vaId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        success('Virtual Airline deleted successfully');
+        setTimeout(() => router.push('/virtual-airlines'), 1500);
+      } else {
+        const data = await response.json();
+        showError(data.error || 'Failed to delete VA');
+      }
+    } catch (error) {
+      console.error('Failed to delete VA:', error);
+      showError('Failed to delete VA. Please try again.');
+    }
+  };
+
   const handleEditEvent = (event: Event) => {
     setSelectedEvent(event);
     setEventForm({
@@ -668,6 +704,16 @@ export default function VAManagePage() {
               ← Back to {va?.name}
             </Link>
             <h1 className="text-4xl font-bold text-slate-900">🛠️ VA Management</h1>
+          </div>
+          
+          {/* Delete VA Button (Owner only) - shown in manage page */}
+          <div>
+            <button
+              onClick={() => setShowDeleteVAModal(true)}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors"
+            >
+              🗑️ Delete VA
+            </button>
           </div>
         </div>
 
@@ -1893,6 +1939,23 @@ export default function VAManagePage() {
           </motion.div>
         </div>
       )}
+
+      {/* Delete VA Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteVAModal}
+        onClose={() => setShowDeleteVAModal(false)}
+        onConfirm={handleDeleteVA}
+        title="Delete Virtual Airline?"
+        message="This action is PERMANENT and cannot be undone. All associated data including fleet, routes, members, events, and flights will be deleted."
+        confirmText="Delete VA"
+        cancelText="Cancel"
+        type="danger"
+        requiresTyping
+        typingText="DELETE"
+      />
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 }

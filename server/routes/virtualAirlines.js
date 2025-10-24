@@ -221,17 +221,17 @@ router.post('/:vaId/join', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Virtual Airline not found' });
     }
 
-    // Check if already member
+    // Check if already an active member
     const [existing] = await db.query(
-      'SELECT id FROM va_members WHERE user_id = ? AND va_id = ?',
-      [userId, vaId]
+      'SELECT id FROM va_members WHERE user_id = ? AND va_id = ? AND status = ?',
+      [userId, vaId, 'active']
     );
 
     if (existing.length > 0) {
       return res.status(400).json({ error: 'Already a member of this VA' });
     }
 
-    // Add member
+    // Add member (or re-add if they left before)
     await db.query(
       'INSERT INTO va_members (user_id, va_id, role) VALUES (?, ?, ?)',
       [userId, vaId, 'Member']
@@ -440,6 +440,55 @@ router.get('/:vaId/my-stats', authMiddleware, async (req, res) => {
     console.error('Get my stats error:', error);
     console.error('Error details:', error.message); // Debug
     res.status(500).json({ error: 'Failed to fetch stats', details: error.message });
+  }
+});
+
+// Leave VA (for Admin, Member, Pilot - not Owner)
+router.post('/:vaId/leave', authMiddleware, async (req, res) => {
+  try {
+    const { vaId } = req.params;
+    const userId = req.user.id;
+
+    // Check if user is a member
+    const [member] = await db.query(
+      'SELECT id, role FROM va_members WHERE user_id = ? AND va_id = ? AND status = ?',
+      [userId, vaId, 'active']
+    );
+
+    if (member.length === 0) {
+      return res.status(404).json({ error: 'You are not a member of this VA' });
+    }
+
+    // Prevent owner from leaving (they must delete the VA instead)
+    if (member[0].role === 'Owner') {
+      return res.status(403).json({ error: 'Owner cannot leave the VA. Delete the VA instead.' });
+    }
+
+    // Delete member completely so they can rejoin later
+    await db.query(
+      'DELETE FROM va_members WHERE id = ?',
+      [member[0].id]
+    );
+
+    res.json({ message: 'Successfully left the Virtual Airline' });
+  } catch (error) {
+    console.error('Leave VA error:', error);
+    res.status(500).json({ error: 'Failed to leave Virtual Airline' });
+  }
+});
+
+// Delete VA (Owner only)
+router.delete('/:vaId', authMiddleware, checkVARole(['Owner']), async (req, res) => {
+  try {
+    const { vaId } = req.params;
+
+    // Delete the VA (CASCADE will handle related tables)
+    await db.query('DELETE FROM virtual_airlines WHERE id = ?', [vaId]);
+
+    res.json({ message: 'Virtual Airline deleted successfully' });
+  } catch (error) {
+    console.error('Delete VA error:', error);
+    res.status(500).json({ error: 'Failed to delete Virtual Airline' });
   }
 });
 

@@ -5,6 +5,9 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import NavBar from '@/components/NavBar';
+import { ToastContainer } from '@/components/Toast';
+import { useToast } from '@/hooks/useToast';
+import ConfirmModal from '@/components/ConfirmModal';
 
 interface VA {
   id: number;
@@ -51,6 +54,7 @@ export default function VADetailPage() {
   const router = useRouter();
   const params = useParams();
   const vaId = params.id as string;
+  const { toasts, removeToast, success, error: showError, warning } = useToast();
 
   const [va, setVa] = useState<VA | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -62,6 +66,10 @@ export default function VADetailPage() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isMember, setIsMember] = useState(false);
   const [joining, setJoining] = useState(false);
+  
+  // Confirm modals
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   
   // Edit modal states
   const [showEditModal, setShowEditModal] = useState(false);
@@ -163,16 +171,75 @@ export default function VADetailPage() {
       });
 
       if (response.ok) {
+        success('Successfully joined the Virtual Airline! 🎉');
         await fetchVAData(); // Refresh data
       } else {
         const data = await response.json();
-        alert(data.message || 'Failed to join VA');
+        showError(data.error || 'Failed to join VA');
       }
     } catch (error) {
       console.error('Failed to join VA:', error);
-      alert('Failed to join VA');
+      showError('Failed to join VA. Please try again.');
     } finally {
       setJoining(false);
+    }
+  };
+
+  const handleLeaveVA = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/auth/login');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/virtual-airlines/${vaId}/leave`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        success('You have left the Virtual Airline');
+        setTimeout(() => router.push('/virtual-airlines'), 1500);
+      } else {
+        const data = await response.json();
+        showError(data.error || 'Failed to leave VA');
+      }
+    } catch (error) {
+      console.error('Failed to leave VA:', error);
+      showError('Failed to leave VA. Please try again.');
+    }
+  };
+
+  const handleDeleteVA = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/auth/login');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/virtual-airlines/${vaId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        success('Virtual Airline deleted successfully');
+        setTimeout(() => router.push('/virtual-airlines'), 1500);
+      } else {
+        const data = await response.json();
+        showError(data.error || 'Failed to delete VA');
+      }
+    } catch (error) {
+      console.error('Failed to delete VA:', error);
+      showError('Failed to delete VA. Please try again.');
     }
   };
 
@@ -331,6 +398,21 @@ export default function VADetailPage() {
                         📋 Validate PIREPs
                       </Link>
                     </>
+                  )}
+                  {userRole === 'Owner' ? (
+                    <button
+                      onClick={() => setShowDeleteModal(true)}
+                      className="btn-secondary text-center bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      🗑️ Delete VA
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setShowLeaveModal(true)}
+                      className="btn-secondary text-center bg-orange-600 hover:bg-orange-700 text-white"
+                    >
+                      🚪 Leave VA
+                    </button>
                   )}
                 </>
               )}
@@ -763,6 +845,35 @@ export default function VADetailPage() {
           </motion.div>
         </div>
       )}
+
+      {/* Leave VA Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showLeaveModal}
+        onClose={() => setShowLeaveModal(false)}
+        onConfirm={handleLeaveVA}
+        title="Leave Virtual Airline?"
+        message="Are you sure you want to leave this Virtual Airline? You will lose all your points and statistics with this VA, but you can rejoin later."
+        confirmText="Leave VA"
+        cancelText="Cancel"
+        type="warning"
+      />
+
+      {/* Delete VA Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteVA}
+        title="Delete Virtual Airline?"
+        message="This action is PERMANENT and cannot be undone. All associated data including fleet, routes, members, events, and flights will be deleted."
+        confirmText="Delete VA"
+        cancelText="Cancel"
+        type="danger"
+        requiresTyping
+        typingText="DELETE"
+      />
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 }
