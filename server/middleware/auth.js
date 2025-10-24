@@ -34,16 +34,40 @@ const checkVARole = (allowedRoles = []) => {
 
       const userRole = members[0].role;
       
-      if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
+      // Case-insensitive role comparison
+      if (allowedRoles.length > 0 && !allowedRoles.some(role => role.toLowerCase() === userRole.toLowerCase())) {
         return res.status(403).json({ error: 'Insufficient permissions' });
       }
 
       req.vaRole = userRole;
       next();
     } catch (error) {
+      console.error('Permission check error:', error);
       return res.status(500).json({ error: 'Permission check failed' });
     }
   };
 };
 
-module.exports = { authMiddleware, checkVARole };
+// Super Admin middleware
+const checkSuperAdmin = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const db = require('../config/database');
+    
+    const [users] = await db.query(
+      'SELECT is_super_admin FROM users WHERE id = ?',
+      [userId]
+    );
+
+    if (users.length === 0 || !users[0].is_super_admin) {
+      return res.status(403).json({ error: 'Super Admin access required' });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Super Admin check error:', error);
+    return res.status(500).json({ error: 'Permission check failed' });
+  }
+};
+
+module.exports = { authMiddleware, checkVARole, checkSuperAdmin };

@@ -17,6 +17,9 @@ interface VA {
   iata_code?: string;
   logo_url?: string;
   description: string;
+  contact_email?: string;
+  contact_discord?: string;
+  contact_other?: string;
   owner_id: number;
   owner_username: string;
   created_at: string;
@@ -77,6 +80,9 @@ export default function VADetailPage() {
     name: '',
     description: '',
     website: '',
+    contact_email: '',
+    contact_discord: '',
+    contact_other: '',
     logo_url: ''
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -106,6 +112,9 @@ export default function VADetailPage() {
         name: vaData.virtualAirline.name || '',
         description: vaData.virtualAirline.description || '',
         website: vaData.virtualAirline.website || '',
+        contact_email: vaData.virtualAirline.contact_email || '',
+        contact_discord: vaData.virtualAirline.contact_discord || '',
+        contact_other: vaData.virtualAirline.contact_other || '',
         logo_url: vaData.virtualAirline.logo_url || ''
       });
 
@@ -260,10 +269,15 @@ export default function VADetailPage() {
       formDataToSend.append('description', editForm.description);
       formDataToSend.append('website', editForm.website || '');
       
-      // Add logo file or URL
+      // Add contact information
+      formDataToSend.append('contact_email', editForm.contact_email || '');
+      formDataToSend.append('contact_discord', editForm.contact_discord || '');
+      formDataToSend.append('contact_other', editForm.contact_other || '');
+      
+      // Only add logo if there's a new file uploaded or URL changed
       if (logoFile) {
         formDataToSend.append('logo', logoFile);
-      } else if (editForm.logo_url) {
+      } else if (editForm.logo_url && editForm.logo_url !== va?.logo_url) {
         formDataToSend.append('logo_url', editForm.logo_url);
       }
 
@@ -360,6 +374,39 @@ export default function VADetailPage() {
                   </p>
                 )}
                 <p className="text-slate-600">{va.description}</p>
+                {(va.contact_email || va.contact_discord || va.contact_other) && (
+                  <div className="mt-4 pt-4 border-t border-slate-200">
+                    <p className="text-sm font-semibold text-slate-700 mb-2">📞 Contact Information:</p>
+                    <div className="space-y-1">
+                      {va.contact_email && (
+                        <p className="text-sm text-slate-600 flex items-center gap-2">
+                          <span>📧</span>
+                          <a href={`mailto:${va.contact_email}`} className="text-aviation-600 hover:underline">
+                            {va.contact_email}
+                          </a>
+                        </p>
+                      )}
+                      {va.contact_discord && (
+                        <p className="text-sm text-slate-600 flex items-center gap-2">
+                          <span>💬</span>
+                          {va.contact_discord.startsWith('http') ? (
+                            <a href={va.contact_discord} target="_blank" rel="noopener noreferrer" className="text-aviation-600 hover:underline">
+                              Discord Server
+                            </a>
+                          ) : (
+                            <span>{va.contact_discord}</span>
+                          )}
+                        </p>
+                      )}
+                      {va.contact_other && (
+                        <p className="text-sm text-slate-600 flex items-center gap-2">
+                          <span>🌐</span>
+                          <span>{va.contact_other}</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
                 <p className="text-sm text-slate-500 mt-3">
                   Founded by <span className="font-semibold">{va.owner_username}</span> on {new Date(va.created_at).toLocaleDateString()}
                 </p>
@@ -767,12 +814,62 @@ export default function VADetailPage() {
                     Website
                   </label>
                   <input
-                    type="url"
+                    type="text"
                     value={editForm.website}
                     onChange={(e) => setEditForm({...editForm, website: e.target.value})}
                     placeholder="https://example.com"
                     className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg focus:outline-none focus:border-aviation-500"
                   />
+                </div>
+
+                {/* Contact Information */}
+                <div className="bg-aviation-50 p-6 rounded-lg border-2 border-aviation-200">
+                  <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                    📞 Contact Information
+                    <span className="text-xs font-normal text-slate-500">(Optional)</span>
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
+                        📧 Contact Email
+                      </label>
+                      <input
+                        type="email"
+                        value={editForm.contact_email}
+                        onChange={(e) => setEditForm({...editForm, contact_email: e.target.value})}
+                        placeholder="contact@yourvirtualairline.com"
+                        className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg focus:outline-none focus:border-aviation-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
+                        💬 Discord Server
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.contact_discord}
+                        onChange={(e) => setEditForm({...editForm, contact_discord: e.target.value})}
+                        placeholder="https://discord.gg/yourserver or YourServer#1234"
+                        className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg focus:outline-none focus:border-aviation-500"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">Discord invite link or server name</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
+                        🌐 Other Contact (WhatsApp, Telegram, etc.)
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.contact_other}
+                        onChange={(e) => setEditForm({...editForm, contact_other: e.target.value})}
+                        placeholder="WhatsApp: +1234567890 or Telegram: @yourusername"
+                        className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg focus:outline-none focus:border-aviation-500"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div>
@@ -793,7 +890,7 @@ export default function VADetailPage() {
                     <div>
                       <label className="block text-xs text-slate-600 mb-2">Logo URL</label>
                       <input
-                        type="url"
+                        type="text"
                         value={editForm.logo_url}
                         onChange={(e) => {
                           setEditForm({...editForm, logo_url: e.target.value});

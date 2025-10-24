@@ -35,6 +35,9 @@ export default function VirtualAirlinesPage() {
     icao_code: '',
     description: '',
     logo_url: '',
+    contact_email: '',
+    contact_discord: '',
+    contact_other: '',
     primary_color: '#00c853',
     secondary_color: '#00a843',
     accent_color: '#00ff7f',
@@ -118,6 +121,11 @@ export default function VirtualAirlinesPage() {
       if (formData.icao_code) formDataToSend.append('icao_code', formData.icao_code);
       if (formData.iata_code) formDataToSend.append('iata_code', formData.iata_code);
       formDataToSend.append('description', formData.description);
+      
+      // Add contact information
+      if (formData.contact_email) formDataToSend.append('contact_email', formData.contact_email);
+      if (formData.contact_discord) formDataToSend.append('contact_discord', formData.contact_discord);
+      if (formData.contact_other) formDataToSend.append('contact_other', formData.contact_other);
       
       // Add branding colors
       formDataToSend.append('primary_color', formData.primary_color);
@@ -381,6 +389,59 @@ export default function VirtualAirlinesPage() {
                   placeholder="Describe your virtual airline..."
                   className="w-full px-4 py-3 rounded-lg border-2 border-slate-300 bg-white focus:border-aviation-500 focus:ring-2 focus:ring-aviation-200 outline-none resize-none transition-all"
                 />
+              </div>
+
+              {/* Contact Information */}
+              <div className="bg-aviation-50 p-6 rounded-lg border-2 border-aviation-200">
+                <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                  📞 Contact Information
+                  <span className="text-xs font-normal text-slate-500">(Optional)</span>
+                </h3>
+                <p className="text-sm text-slate-600 mb-4">
+                  Provide contact methods so pilots can reach you for questions, applications, or support.
+                </p>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
+                      📧 Contact Email
+                    </label>
+                    <input
+                      type="email"
+                      value={formData.contact_email}
+                      onChange={(e) => setFormData({...formData, contact_email: e.target.value})}
+                      placeholder="contact@yourvirtualairline.com"
+                      className="w-full px-4 py-3 rounded-lg border-2 border-slate-300 bg-white focus:border-aviation-500 focus:ring-2 focus:ring-aviation-200 outline-none transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
+                      💬 Discord Server
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.contact_discord}
+                      onChange={(e) => setFormData({...formData, contact_discord: e.target.value})}
+                      placeholder="https://discord.gg/yourserver or YourServer#1234"
+                      className="w-full px-4 py-3 rounded-lg border-2 border-slate-300 bg-white focus:border-aviation-500 focus:ring-2 focus:ring-aviation-200 outline-none transition-all"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">Discord invite link or server name</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
+                      🌐 Other Contact (WhatsApp, Telegram, etc.)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.contact_other}
+                      onChange={(e) => setFormData({...formData, contact_other: e.target.value})}
+                      placeholder="WhatsApp: +1234567890 or Telegram: @yourusername"
+                      className="w-full px-4 py-3 rounded-lg border-2 border-slate-300 bg-white focus:border-aviation-500 focus:ring-2 focus:ring-aviation-200 outline-none transition-all"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="bg-white p-4 rounded-lg border-2 border-slate-300">

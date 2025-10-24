@@ -14,8 +14,10 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     last_login TIMESTAMP NULL,
     status ENUM('active', 'suspended', 'inactive') DEFAULT 'active',
+    is_super_admin BOOLEAN DEFAULT FALSE,
     INDEX idx_email (email),
-    INDEX idx_username (username)
+    INDEX idx_username (username),
+    INDEX idx_super_admin (is_super_admin)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Virtual Airlines Table

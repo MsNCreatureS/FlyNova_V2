@@ -17,6 +17,7 @@ const aircraftRoutes = require('./routes/aircraft');
 const eventRoutes = require('./routes/events');
 const simbriefRoutes = require('./routes/simbrief');
 const acarsRoutes = require('./routes/acars');
+const superAdminRoutes = require('./routes/superadmin');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -49,6 +50,7 @@ app.use('/api/aircraft', aircraftRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/simbrief', simbriefRoutes);
 app.use('/api/acars', acarsRoutes);
+app.use('/api/superadmin', superAdminRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

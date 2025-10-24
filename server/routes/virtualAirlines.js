@@ -65,7 +65,10 @@ router.post('/', authMiddleware, upload.single('logo'), async (req, res) => {
       icao_code, 
       iata_code, 
       description, 
-      website, 
+      website,
+      contact_email,
+      contact_discord,
+      contact_other,
       logo_url,
       primary_color,
       secondary_color,
@@ -100,12 +103,13 @@ router.post('/', authMiddleware, upload.single('logo'), async (req, res) => {
       finalLogoUrl = '/uploads/logos/' + req.file.filename;
     }
 
-    // Create VA with branding colors
+    // Create VA with branding colors and contact info
     const [result] = await db.query(
       `INSERT INTO virtual_airlines 
-      (name, callsign, icao_code, iata_code, owner_id, description, website, logo_url, 
+      (name, callsign, icao_code, iata_code, owner_id, description, website, logo_url,
+       contact_email, contact_discord, contact_other,
        primary_color, secondary_color, accent_color, text_on_primary) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name, 
         callsign, 
@@ -115,6 +119,9 @@ router.post('/', authMiddleware, upload.single('logo'), async (req, res) => {
         description || null, 
         website || null, 
         finalLogoUrl,
+        contact_email || null,
+        contact_discord || null,
+        contact_other || null,
         primary_color || '#00c853',
         secondary_color || '#00a843',
         accent_color || '#00ff7f',
@@ -276,17 +283,31 @@ router.get('/:vaId/leaderboard', async (req, res) => {
 router.put('/:vaId', authMiddleware, checkVARole(['Owner', 'Admin']), upload.single('logo'), async (req, res) => {
   try {
     const { vaId } = req.params;
-    const { name, description, website, logo_url } = req.body;
+    const { name, description, website, contact_email, contact_discord, contact_other, logo_url } = req.body;
 
-    // Determine logo URL (uploaded file or external URL)
-    let finalLogoUrl = logo_url;
+    // Build update query dynamically based on what's provided
+    let updateFields = [];
+    let updateValues = [];
+
+    // Always update these fields
+    updateFields.push('name = ?', 'description = ?', 'website = ?', 'contact_email = ?', 'contact_discord = ?', 'contact_other = ?');
+    updateValues.push(name, description, website, contact_email, contact_discord, contact_other);
+
+    // Only update logo if a new one is provided
     if (req.file) {
-      finalLogoUrl = '/uploads/logos/' + req.file.filename;
+      updateFields.push('logo_url = ?');
+      updateValues.push('/uploads/logos/' + req.file.filename);
+    } else if (logo_url) {
+      updateFields.push('logo_url = ?');
+      updateValues.push(logo_url);
     }
 
+    // Add vaId to the end of values array
+    updateValues.push(vaId);
+
     await db.query(
-      'UPDATE virtual_airlines SET name = ?, description = ?, website = ?, logo_url = ? WHERE id = ?',
-      [name, description, website, finalLogoUrl, vaId]
+      `UPDATE virtual_airlines SET ${updateFields.join(', ')} WHERE id = ?`,
+      updateValues
     );
 
     res.json({ message: 'Virtual Airline updated successfully' });

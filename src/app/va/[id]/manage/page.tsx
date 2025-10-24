@@ -59,6 +59,19 @@ interface Event {
   created_at: string;
 }
 
+interface Download {
+  id: number;
+  title: string;
+  description: string;
+  file_url: string;
+  file_type: string;
+  is_external_url: boolean;
+  download_count: number;
+  uploaded_by_username: string;
+  aircraft_name?: string;
+  created_at: string;
+}
+
 export default function VAManagePage() {
   const params = useParams();
   const router = useRouter();
@@ -66,7 +79,7 @@ export default function VAManagePage() {
   const { toasts, removeToast, success, error: showError } = useToast();
 
   const [va, setVa] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'fleet' | 'routes' | 'members' | 'events'>('fleet');
+  const [activeTab, setActiveTab] = useState<'fleet' | 'routes' | 'members' | 'events' | 'downloads'>('fleet');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
@@ -130,6 +143,18 @@ export default function VAManagePage() {
   const [addingEvent, setAddingEvent] = useState(false);
   const [updatingEvent, setUpdatingEvent] = useState(false);
 
+  // Downloads states
+  const [downloads, setDownloads] = useState<Download[]>([]);
+  const [showAddDownload, setShowAddDownload] = useState(false);
+  const [downloadForm, setDownloadForm] = useState({
+    title: '',
+    description: '',
+    file_type: 'livery',
+    external_url: '',
+    aircraft_id: ''
+  });
+  const [addingDownload, setAddingDownload] = useState(false);
+
   useEffect(() => {
     if (vaId) {
       fetchVAData();
@@ -180,6 +205,13 @@ export default function VAManagePage() {
       if (eventsResponse.ok) {
         const eventsData = await eventsResponse.json();
         setEvents(eventsData.events || []);
+      }
+
+      // Fetch downloads
+      const downloadsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/downloads/${vaId}`, { headers });
+      if (downloadsResponse.ok) {
+        const downloadsData = await downloadsResponse.json();
+        setDownloads(downloadsData.downloads || []);
       }
 
       setLoading(false);
@@ -678,6 +710,80 @@ export default function VAManagePage() {
     }
   };
 
+  // Downloads functions
+  const handleAddDownload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setAddingDownload(true);
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/auth/login');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/downloads/${vaId}/add`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          title: downloadForm.title,
+          description: downloadForm.description,
+          fileType: downloadForm.file_type,
+          externalUrl: downloadForm.external_url,
+          isExternalUrl: true,
+          aircraftId: downloadForm.aircraft_id || null
+        })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to add download');
+      }
+
+      success('Download link added successfully! 🎉');
+      setShowAddDownload(false);
+      setDownloadForm({
+        title: '',
+        description: '',
+        file_type: 'livery',
+        external_url: '',
+        aircraft_id: ''
+      });
+      await fetchVAData();
+    } catch (err: any) {
+      showError(err.message);
+    } finally {
+      setAddingDownload(false);
+    }
+  };
+
+  const handleDeleteDownload = async (downloadId: number) => {
+    if (!confirm('Are you sure you want to delete this download?')) return;
+
+    const token = localStorage.getItem('token');
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/downloads/${vaId}/${downloadId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete download');
+      }
+
+      success('Download deleted successfully');
+      await fetchVAData();
+    } catch (err) {
+      showError('Failed to delete download');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50">
@@ -765,6 +871,16 @@ export default function VAManagePage() {
               }`}
             >
               🎯 Events
+            </button>
+            <button
+              onClick={() => setActiveTab('downloads')}
+              className={`pb-4 px-2 font-semibold transition-colors ${
+                activeTab === 'downloads'
+                  ? 'text-aviation-600 border-b-2 border-aviation-600'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              📥 Downloads
             </button>
             <Link
               href={`/va/${vaId}/manage/pireps`}
@@ -1112,7 +1228,214 @@ export default function VAManagePage() {
             )}
           </motion.div>
         )}
+
+        {/* Downloads Tab */}
+        {activeTab === 'downloads' && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-slate-900">Downloads ({downloads.length})</h2>
+              <button
+                onClick={() => setShowAddDownload(true)}
+                className="btn-primary"
+              >
+                + Add Download Link
+              </button>
+            </div>
+
+            {downloads.length > 0 ? (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {downloads.map((download) => (
+                  <div key={download.id} className="card p-6 hover:shadow-xl transition-shadow">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-slate-900 mb-1">{download.title}</h3>
+                        {download.aircraft_name && (
+                          <p className="text-sm text-slate-500">{download.aircraft_name}</p>
+                        )}
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${
+                        download.file_type === 'livery' ? 'bg-purple-100 text-purple-700' :
+                        download.file_type === 'document' ? 'bg-green-100 text-green-700' :
+                        'bg-slate-100 text-slate-700'
+                      }`}>
+                        {download.file_type}
+                      </span>
+                    </div>
+
+                    <p className="text-slate-600 text-sm mb-4 line-clamp-3 min-h-[3.5rem]">
+                      {download.description}
+                    </p>
+
+                    <div className="flex items-center justify-between text-sm text-slate-500 mb-4">
+                      <span>📥 {download.download_count} downloads</span>
+                      <span>{new Date(download.created_at).toLocaleDateString()}</span>
+                    </div>
+
+                    <div className="text-xs text-slate-400 mb-3 truncate">
+                      <strong>URL:</strong> {download.file_url}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <a
+                        href={download.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 px-4 py-2 bg-aviation-600 text-white rounded-lg text-center font-semibold hover:bg-aviation-700 transition-colors"
+                      >
+                        🔗 Open Link
+                      </a>
+                      <button
+                        onClick={() => handleDeleteDownload(download.id)}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+
+                    <p className="text-xs text-slate-400 mt-3 text-center">
+                      Added by {download.uploaded_by_username}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="card p-12 text-center">
+                <div className="text-6xl mb-4">📥</div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">No Downloads</h3>
+                <p className="text-slate-600 mb-6">Add download links for liveries, documents, and other resources</p>
+                <button onClick={() => setShowAddDownload(true)} className="btn-primary">
+                  + Add Download Link
+                </button>
+              </div>
+            )}
+          </motion.div>
+        )}
       </main>
+
+      {/* Add Download Modal */}
+      {showAddDownload && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-slate-50 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          >
+            <div className="p-8">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-3xl font-bold text-slate-900">📥 Add Download Link</h2>
+                <button
+                  onClick={() => setShowAddDownload(false)}
+                  className="text-slate-400 hover:text-slate-600 text-2xl"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleAddDownload} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={downloadForm.title}
+                    onChange={(e) => setDownloadForm({...downloadForm, title: e.target.value})}
+                    placeholder="Boeing 737-800 Livery"
+                    required
+                    className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg focus:outline-none focus:border-aviation-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Description *
+                  </label>
+                  <textarea
+                    value={downloadForm.description}
+                    onChange={(e) => setDownloadForm({...downloadForm, description: e.target.value})}
+                    placeholder="Official livery for PMDG 737..."
+                    required
+                    rows={4}
+                    className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg focus:outline-none focus:border-aviation-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    File Type *
+                  </label>
+                  <select
+                    value={downloadForm.file_type}
+                    onChange={(e) => setDownloadForm({...downloadForm, file_type: e.target.value})}
+                    required
+                    className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg focus:outline-none focus:border-aviation-500"
+                  >
+                    <option value="livery">🎨 Livery</option>
+                    <option value="document">📄 Document</option>
+                    <option value="other">📦 Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Download URL *
+                  </label>
+                  <input
+                    type="url"
+                    value={downloadForm.external_url}
+                    onChange={(e) => setDownloadForm({...downloadForm, external_url: e.target.value})}
+                    placeholder="https://example.com/download/livery.zip"
+                    required
+                    className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg focus:outline-none focus:border-aviation-500"
+                  />
+                  <p className="text-sm text-slate-500 mt-2">
+                    💡 Tip: Use external hosting sites (Google Drive, Mega, Dropbox, etc.) for large files
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Aircraft (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={downloadForm.aircraft_id}
+                    onChange={(e) => setDownloadForm({...downloadForm, aircraft_id: e.target.value})}
+                    placeholder="Leave empty if not aircraft-specific"
+                    className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg focus:outline-none focus:border-aviation-500"
+                  />
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddDownload(false);
+                      setDownloadForm({
+                        title: '',
+                        description: '',
+                        file_type: 'livery',
+                        external_url: '',
+                        aircraft_id: ''
+                      });
+                    }}
+                    className="flex-1 px-6 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-lg hover:bg-slate-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={addingDownload}
+                    className="flex-1 btn-primary"
+                  >
+                    {addingDownload ? 'Adding...' : 'Add Download'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Add Aircraft Modal */}
       {showAddAircraft && (

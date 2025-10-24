@@ -63,7 +63,55 @@ router.get('/:vaId', async (req, res) => {
   }
 });
 
-// Upload file (admin only)
+// Add download (file upload OR external URL) (admin only)
+router.post('/:vaId/add', authMiddleware, checkVARole(['owner', 'admin']), upload.single('file'), async (req, res) => {
+  try {
+    const { vaId } = req.params;
+    const { title, description, fileType, aircraftId, externalUrl, isExternalUrl } = req.body;
+    const userId = req.user.id;
+
+    let fileUrl, fileName, fileSize, isExternal;
+
+    // Check if it's an external URL or file upload
+    if (isExternalUrl === 'true' || isExternalUrl === true) {
+      // External URL (for liveries, etc.)
+      if (!externalUrl) {
+        return res.status(400).json({ error: 'External URL is required' });
+      }
+      fileUrl = externalUrl;
+      fileName = null;
+      fileSize = null;
+      isExternal = true;
+    } else {
+      // File upload
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+      fileUrl = `/uploads/${req.file.filename}`;
+      fileName = req.file.originalname;
+      fileSize = req.file.size;
+      isExternal = false;
+    }
+
+    const [result] = await db.query(
+      `INSERT INTO downloads (va_id, title, description, file_type, file_name, file_url, file_size, is_external_url, aircraft_id, uploaded_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [vaId, title, description, fileType, fileName, fileUrl, fileSize, isExternal, aircraftId || null, userId]
+    );
+
+    res.status(201).json({
+      message: isExternal ? 'Download link added successfully' : 'File uploaded successfully',
+      downloadId: result.insertId,
+      fileUrl,
+      isExternal
+    });
+  } catch (error) {
+    console.error('Add download error:', error);
+    res.status(500).json({ error: 'Failed to add download' });
+  }
+});
+
+// Legacy endpoint for backward compatibility
 router.post('/:vaId/upload', authMiddleware, checkVARole(['owner', 'admin']), upload.single('file'), async (req, res) => {
   try {
     const { vaId } = req.params;
@@ -77,9 +125,9 @@ router.post('/:vaId/upload', authMiddleware, checkVARole(['owner', 'admin']), up
     const fileUrl = `/uploads/${req.file.filename}`;
 
     const [result] = await db.query(
-      `INSERT INTO downloads (va_id, title, description, file_type, file_name, file_url, file_size, aircraft_id, uploaded_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [vaId, title, description, fileType, req.file.originalname, fileUrl, req.file.size, aircraftId || null, userId]
+      `INSERT INTO downloads (va_id, title, description, file_type, file_name, file_url, file_size, is_external_url, aircraft_id, uploaded_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [vaId, title, description, fileType, req.file.originalname, fileUrl, req.file.size, false, aircraftId || null, userId]
     );
 
     res.status(201).json({
@@ -100,7 +148,7 @@ router.delete('/:vaId/:downloadId', authMiddleware, checkVARole(['owner', 'admin
 
     // Get file info
     const [downloads] = await db.query(
-      'SELECT file_url FROM downloads WHERE id = ? AND va_id = ?',
+      'SELECT file_url, is_external_url FROM downloads WHERE id = ? AND va_id = ?',
       [downloadId, vaId]
     );
 
@@ -108,10 +156,12 @@ router.delete('/:vaId/:downloadId', authMiddleware, checkVARole(['owner', 'admin
       return res.status(404).json({ error: 'Download not found' });
     }
 
-    // Delete file from filesystem
-    const filePath = path.join(__dirname, '../../public', downloads[0].file_url);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    // Only delete file from filesystem if it's a local file (not external URL)
+    if (!downloads[0].is_external_url) {
+      const filePath = path.join(__dirname, '../../public', downloads[0].file_url);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
     }
 
     // Delete from database

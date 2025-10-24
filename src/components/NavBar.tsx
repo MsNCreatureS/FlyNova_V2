@@ -11,6 +11,7 @@ interface User {
   username: string;
   email: string;
   avatar_url?: string;
+  is_super_admin?: boolean;
 }
 
 interface ActiveFlight {
@@ -103,14 +104,7 @@ export default function NavBar() {
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
             {isInVADashboard && logoUrl ? (
-              <>
-                <img src={logoUrl} alt={vaName || 'Virtual Airline'} className="h-10 w-auto object-contain" />
-                {vaName && (
-                  <span className="text-2xl font-bold" style={{ color: 'var(--color-primary)' }}>
-                    {vaName}
-                  </span>
-                )}
-              </>
+              <img src={logoUrl} alt={vaName || 'Virtual Airline'} className="h-10 w-auto object-contain" />
             ) : (
               <>
                 <img src="/logo.png" alt="FlyNova" className="h-10 w-auto" />
@@ -202,7 +196,7 @@ export default function NavBar() {
                         isActive('/tracker') ? 'text-aviation-600' : 'text-slate-600 hover:text-aviation-600'
                       }`}
                     >
-                      Tracker
+                      Acars
                     </Link>
                     <Link 
                       href="/downloads" 
@@ -212,6 +206,16 @@ export default function NavBar() {
                     >
                       Downloads
                     </Link>
+                    {user?.is_super_admin && (
+                      <Link 
+                        href="/superadmin" 
+                        className={`font-semibold transition-colors flex items-center gap-1 ${
+                          isActive('/superadmin') ? 'text-red-600' : 'text-red-600 hover:text-red-700'
+                        }`}
+                      >
+                        <span>🔐</span> Super Admin
+                      </Link>
+                    )}
                   </>
                 )}
               </>
@@ -322,8 +326,13 @@ export default function NavBar() {
                   <>
                     <Link href="/dashboard" className="block text-slate-700 hover:text-aviation-600 font-semibold">Dashboard</Link>
                     <Link href="/virtual-airlines" className="block text-slate-700 hover:text-aviation-600 font-semibold">Virtual Airlines</Link>
-                    <Link href="/tracker" className="block text-slate-700 hover:text-aviation-600 font-semibold">Tracker</Link>
+                    <Link href="/tracker" className="block text-slate-700 hover:text-aviation-600 font-semibold">Acars</Link>
                     <Link href="/downloads" className="block text-slate-700 hover:text-aviation-600 font-semibold">Downloads</Link>
+                    {user?.is_super_admin && (
+                      <Link href="/superadmin" className="block text-red-600 hover:text-red-700 font-bold">
+                        🔐 Super Admin
+                      </Link>
+                    )}
                   </>
                 )}
                 <Link href={`/profile/${user.id}`} className="block text-slate-700 hover:text-aviation-600 font-semibold">My Profile</Link>
