@@ -253,3 +253,55 @@ CREATE TABLE IF NOT EXISTS user_achievements (
     UNIQUE KEY unique_achievement (user_id, achievement_id, va_id),
     INDEX idx_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Password Reset Tokens
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    token VARCHAR(255) NOT NULL UNIQUE,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    used BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_token (token),
+    INDEX idx_user (user_id),
+    INDEX idx_expires (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========================================
+-- STORED PROCEDURES AND EVENTS
+-- ========================================
+
+-- Procedure to automatically update event statuses based on dates
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS update_event_statuses$$
+
+CREATE PROCEDURE update_event_statuses()
+BEGIN
+    -- Set status to 'active' for events that should be active now
+    UPDATE events 
+    SET status = 'active'
+    WHERE start_date <= NOW() 
+      AND end_date >= NOW()
+      AND status = 'upcoming';
+    
+    -- Set status to 'completed' for events that have ended
+    UPDATE events 
+    SET status = 'completed'
+    WHERE end_date < NOW()
+      AND status IN ('active', 'upcoming');
+END$$
+
+DELIMITER ;
+
+-- Enable event scheduler
+SET GLOBAL event_scheduler = ON;
+
+-- Schedule the procedure to run every minute
+DROP EVENT IF EXISTS auto_update_event_statuses;
+
+CREATE EVENT auto_update_event_statuses
+ON SCHEDULE EVERY 1 MINUTE
+DO
+  CALL update_event_statuses();

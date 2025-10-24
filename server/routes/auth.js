@@ -1,8 +1,10 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const db = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
+const { sendPasswordResetEmail } = require('../services/email');
 
 const router = express.Router();
 
@@ -136,6 +138,112 @@ router.get('/me', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ error: 'Failed to fetch user' });
+  }
+});
+
+// Request password reset
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Find user
+    const [users] = await db.query(
+      'SELECT id, email, username FROM users WHERE email = ?',
+      [email]
+    );
+
+    // Always return success to prevent email enumeration
+    if (users.length === 0) {
+      return res.json({ message: 'If an account exists with this email, you will receive a password reset link.' });
+    }
+
+    const user = users[0];
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    
+    // Token expires in 1 hour
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+    // Invalidate any existing tokens for this user
+    await db.query(
+      'UPDATE password_reset_tokens SET used = TRUE WHERE user_id = ? AND used = FALSE',
+      [user.id]
+    );
+
+    // Store hashed token in database
+    await db.query(
+      'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)',
+      [user.id, hashedToken, expiresAt]
+    );
+
+    // Send reset email
+    await sendPasswordResetEmail(user.email, resetToken, user.username);
+
+    res.json({ message: 'If an account exists with this email, you will receive a password reset link.' });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'Failed to process request' });
+  }
+});
+
+// Reset password with token
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ error: 'Token and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    // Hash the token to match what's stored
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Find valid token
+    const [tokens] = await db.query(
+      `SELECT prt.*, u.id as user_id, u.email 
+       FROM password_reset_tokens prt
+       JOIN users u ON prt.user_id = u.id
+       WHERE prt.token = ? 
+       AND prt.used = FALSE 
+       AND prt.expires_at > NOW()`,
+      [hashedToken]
+    );
+
+    if (tokens.length === 0) {
+      return res.status(400).json({ error: 'Invalid or expired reset token' });
+    }
+
+    const resetToken = tokens[0];
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    // Update user password
+    await db.query(
+      'UPDATE users SET password_hash = ? WHERE id = ?',
+      [passwordHash, resetToken.user_id]
+    );
+
+    // Mark token as used
+    await db.query(
+      'UPDATE password_reset_tokens SET used = TRUE WHERE id = ?',
+      [resetToken.id]
+    );
+
+    res.json({ message: 'Password reset successfully' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
   }
 });
 
